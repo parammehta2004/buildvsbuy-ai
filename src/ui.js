@@ -34,11 +34,26 @@ const TYPE_LABELS = Object.freeze({
 /** @type {"ink" | "paper"} */
 let currentTheme = "ink";
 
-/** @type {HTMLElement | null} */
-let appRoot = null;
+/** @type {number | null} */
+let themeTransitionTimer = null;
 
-/** @type {(() => { source: "native" | "polyfill" | "unavailable", error: string | null, tools: Array<{ name: string, description?: string }> }) | null} */
-let getWebmcpRef = null;
+/**
+ * @param {"ink" | "paper"} theme
+ */
+function applyTheme(theme) {
+  currentTheme = theme;
+  const rootEl = document.documentElement;
+  rootEl.dataset.theme = theme;
+
+  if (themeTransitionTimer != null) {
+    window.clearTimeout(themeTransitionTimer);
+  }
+  rootEl.classList.add("theme-transition");
+  themeTransitionTimer = window.setTimeout(() => {
+    rootEl.classList.remove("theme-transition");
+    themeTransitionTimer = null;
+  }, 320);
+}
 
 /**
  * @param {HTMLElement} root
@@ -104,24 +119,34 @@ function renderHeader(snapshot, webmcp) {
  * @param {{ source: "native" | "polyfill" | "unavailable", error: string | null, tools: Array<{ name: string, description?: string }> }} webmcp
  */
 function renderWebmcpChip(webmcp) {
+  const names = webmcp.tools.map((tool) => tool.name);
+  const allRegistered = EXPECTED_TOOLS.every((name) => names.includes(name));
+  const hasError = Boolean(webmcp.error);
+
   if (webmcp.source === "unavailable") {
     return `
       <span class="webmcp-chip is-bad" title="${escapeHtml(webmcp.error || "WebMCP unavailable")}">
         <span class="webmcp-dot" aria-hidden="true"></span>
         WebMCP off
       </span>
+      ${hasError ? `<p class="webmcp-error">WebMCP unavailable: ${escapeHtml(webmcp.error || "unknown error")}. Human controls still work.</p>` : ""}
     `;
   }
 
-  const names = webmcp.tools.map((tool) => tool.name);
-  const allRegistered = EXPECTED_TOOLS.every((name) => names.includes(name));
   const label = webmcp.source === "native" ? "WebMCP native" : "WebMCP polyfill";
+  const status = hasError
+    ? "registration error"
+    : allRegistered
+      ? (webmcp.source === "native" ? "connected" : "no agent (open in ChatGPT Desktop / Chrome WebMCP)")
+      : "missing tools";
+  const chipClass = hasError || !allRegistered ? "is-bad" : "is-ok";
 
   return `
-    <span class="webmcp-chip ${allRegistered ? "is-ok" : "is-bad"}">
+    <span class="webmcp-chip ${chipClass}">
       <span class="webmcp-dot" aria-hidden="true"></span>
-      ${allRegistered ? `${label} · connected` : `${label} · missing tools`}
+      ${label} · ${escapeHtml(status)}
     </span>
+    ${hasError ? `<p class="webmcp-error">Tool registration failed: ${escapeHtml(webmcp.error || "unknown error")}. Human controls still work.</p>` : ""}
   `;
 }
 
@@ -138,14 +163,41 @@ function renderContextStrip(snapshot) {
     <div class="context-strip" role="group" aria-label="Decision context">
       <span class="context-chip is-display">${escapeHtml(orgLabel)}</span>
       <span class="context-chip is-display">${escapeHtml(skillLabel)}</span>
-      <button type="button" class="context-chip is-toggle" data-context="scale_band" aria-pressed="false">
-        Scale ${escapeHtml(snapshot.scaleBand)}
+      <button
+        type="button"
+        class="context-chip is-toggle"
+        data-context="scale_band"
+        aria-pressed="false"
+        aria-label="Scale band — click to cycle through user tiers"
+        title="Click to cycle scale band"
+      >
+        <span class="context-chip-label">Scale</span>
+        <span class="context-chip-value">${escapeHtml(snapshot.scaleBand)}</span>
+        <span class="context-chip-cycle" aria-hidden="true">↻</span>
       </button>
-      <button type="button" class="context-chip is-toggle" data-context="compliance_tier" aria-pressed="false">
-        Compliance ${escapeHtml(snapshot.complianceTier)}
+      <button
+        type="button"
+        class="context-chip is-toggle"
+        data-context="compliance_tier"
+        aria-pressed="false"
+        aria-label="Compliance tier — click to cycle"
+        title="Click to cycle compliance tier"
+      >
+        <span class="context-chip-label">Compliance</span>
+        <span class="context-chip-value">${escapeHtml(snapshot.complianceTier)}</span>
+        <span class="context-chip-cycle" aria-hidden="true">↻</span>
       </button>
-      <button type="button" class="context-chip is-toggle ${snapshot.isCoreIp ? "is-active" : ""}" data-context="is_core_ip" aria-pressed="${snapshot.isCoreIp}">
-        Core IP: ${snapshot.isCoreIp ? "Yes" : "No"}
+      <button
+        type="button"
+        class="context-chip is-toggle ${snapshot.isCoreIp ? "is-active" : ""}"
+        data-context="is_core_ip"
+        aria-pressed="${snapshot.isCoreIp}"
+        aria-label="Core IP flag — click to toggle"
+        title="Click to toggle core IP"
+      >
+        <span class="context-chip-label">Core IP</span>
+        <span class="context-chip-value">${snapshot.isCoreIp ? "Yes" : "No"}</span>
+        <span class="context-chip-cycle" aria-hidden="true">↻</span>
       </button>
       <span class="context-chip is-display">${escapeHtml(timelineLabel)}</span>
     </div>
@@ -310,6 +362,7 @@ function renderWeightsSection(snapshot) {
  */
 function renderSlider(criterion, weight) {
   const label = CRITERION_LABELS[criterion];
+  const fillPct = (weight / 10) * 100;
   return `
     <label class="slider-field" for="weight-${escapeHtml(criterion)}">
       <span class="slider-label">${escapeHtml(label)}</span>
@@ -323,9 +376,25 @@ function renderSlider(criterion, weight) {
         step="0.1"
         value="${escapeHtml(String(weight))}"
         data-criterion="${escapeHtml(criterion)}"
+        style="--slider-fill: ${fillPct}%"
       />
     </label>
   `;
+}
+
+/**
+ * Honest audit-trail copy: Chaos 5 happens mid-session with a populated log.
+ * The tell is no new matching entry, not an empty log.
+ * @param {ReturnType<typeof getSnapshot>} snapshot
+ */
+function auditTrailCopy(snapshot) {
+  const base =
+    "Every ranking claim must have a matching rerank_decision_options entry here. A claim with no new matching entry is ungrounded — including when this log is already full.";
+  if (snapshot.toolLog.length === 0) {
+    return `<p class="tool-log-trail">${base}</p>`;
+  }
+  const last = snapshot.toolLog[snapshot.toolLog.length - 1];
+  return `<p class="tool-log-trail">${base} Last call: <code>${escapeHtml(last.tool)}</code> at ${escapeHtml(formatTimestamp(last.timestamp))}.</p>`;
 }
 
 /**
@@ -337,6 +406,7 @@ function renderToolLog(snapshot) {
       <section class="rail-panel" aria-labelledby="tool-log-heading">
         <h2 id="tool-log-heading">Agent tool log</h2>
         <p class="rail-empty">No tool calls yet.</p>
+        ${auditTrailCopy(snapshot)}
       </section>
     `;
   }
@@ -344,6 +414,7 @@ function renderToolLog(snapshot) {
   return `
     <section class="rail-panel" aria-labelledby="tool-log-heading">
       <h2 id="tool-log-heading">Agent tool log</h2>
+      ${auditTrailCopy(snapshot)}
       <ul class="tool-log-list">
         ${snapshot.toolLog
           .slice()
@@ -402,10 +473,10 @@ function renderLedger(snapshot) {
  */
 function bindEvents(root, snapshot) {
   root.querySelector("#theme-toggle")?.addEventListener("click", () => {
-    currentTheme = currentTheme === "ink" ? "paper" : "ink";
-    document.documentElement.dataset.theme = currentTheme;
-    if (appRoot && getWebmcpRef) {
-      renderApp(appRoot, getWebmcpRef());
+    applyTheme(currentTheme === "ink" ? "paper" : "ink");
+    const toggle = root.querySelector("#theme-toggle");
+    if (toggle) {
+      toggle.textContent = currentTheme === "ink" ? "Paper theme" : "Ink theme";
     }
   });
 
@@ -453,6 +524,13 @@ function bindEvents(root, snapshot) {
       if (valueEl) {
         valueEl.textContent = weight.toFixed(1);
       }
+      target.style.setProperty("--slider-fill", `${(weight / 10) * 100}%`);
+    });
+
+    input.addEventListener("change", (event) => {
+      const target = /** @type {HTMLInputElement} */ (event.currentTarget);
+      const criterion = target.dataset.criterion;
+      const weight = Number(target.value);
       try {
         setPriorityWeight({ criterion, weight });
       } catch (error) {
@@ -468,8 +546,6 @@ function bindEvents(root, snapshot) {
  * @param {() => { source: "native" | "polyfill" | "unavailable", error: string | null, tools: Array<{ name: string, description?: string }> }} getWebmcp
  */
 export function bindApp(root, getWebmcp) {
-  appRoot = root;
-  getWebmcpRef = getWebmcp;
   const redraw = () => renderApp(root, getWebmcp());
   subscribe(redraw);
   redraw();

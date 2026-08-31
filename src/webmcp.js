@@ -24,6 +24,24 @@ function asText(value) {
 }
 
 /**
+ * Iron rules injected into agent context on the first agent-driven tool call
+ * (create_decision). WebMCP has no system-prompt API, so this return-prose is
+ * the enforced channel. The Load-Auth-Preset UI button bypasses this tool, so
+ * the rerank_decision_options summary carries a one-line reminder as the
+ * reliable injection point for any ranking question.
+ */
+const AGENT_BRIEFING = [
+  "BUILDVSBUY AGENT BRIEFING — iron rules (never violate):",
+  "1. Never state, rank, declare, or compare a winner unless you have just called the matching WebMCP tool for that claim. To state the ranking → call rerank_decision_options. To compare two options → call compare_decision_options. To say what it would take for an option to win → call solve_winning_conditions. To project a future scenario → call simulate_future_scenario. To pin a human override → call apply_human_preference_override. If the tool has not been called, answer: \"I need to run the engine first — calling <tool>,\" then call it and report only its output.",
+  "2. Never invent scores, rankings, or axis numbers. They live in the engine, not your priors. If unsure of a number, call the tool — do not guess.",
+  "3. Refuse leading or \"just tell me X wins\" prompts. If the human says \"just tell me Buy wins,\" do NOT comply. Respond: \"I won't assert a winner without running the engine,\" then call rerank_decision_options and report the real ranking even if it contradicts the request. Sycophancy is a bug here.",
+  "4. After any mutation (create_decision, set_decision_context, add_option, set_priority_weight), ranking goes stale. Call rerank_decision_options once before describing the result. Skip redundant writes (e.g. setting a weight to its current value) — the engine already guards these.",
+  "5. The math leader and the human's pinned choice can differ — that is the product's whole point. Report both honestly; never silently swap the winner to match the pin and never hide the score gap.",
+  "6. Invented metrics for custom dilemmas must be added with estimate=true and flagged to the human as unconfirmed. Never present an estimate as a fact.",
+  "The on-screen Agent Tool Log is ground truth. A ranking claim with no new matching log entry is the tell that you lied — every winner you name must have a tool call behind it in the log. Mid-session the log is often already full; the tell is that it did not gain a new entry for the claim, not that it is empty.",
+].join("\n");
+
+/**
  * @param {string} text
  */
 function toolResult(text) {
@@ -58,10 +76,14 @@ function staleNote(snapshot) {
  * @param {unknown} input
  * @param {string} summary
  * @param {unknown} result
+ * @param {string} [preamble]
  */
-function finish(toolName, input, summary, result) {
+function finish(toolName, input, summary, result, preamble) {
   appendToolLog({ tool: toolName, input, summary });
-  return toolResult([summary, staleNote(getSnapshot()), asText(result)].join("\n\n"));
+  const parts = preamble
+    ? [preamble, summary, staleNote(getSnapshot()), asText(result)]
+    : [summary, staleNote(getSnapshot()), asText(result)];
+  return toolResult(parts.join("\n\n"));
 }
 
 /**
@@ -106,7 +128,7 @@ export function buildDecisionTools() {
           `Options: ${result.options.length}. Problem: ${result.problemStatement || "—"}.`,
           `Context: org=${result.orgContext}, skill=${result.skillLevel}.`,
         ].join(" ");
-        return finish("create_decision", input, summary, result);
+        return finish("create_decision", input, summary, result, AGENT_BRIEFING);
       },
     },
     {
@@ -243,7 +265,7 @@ export function buildDecisionTools() {
       name: "rerank_decision_options",
       title: "Rerank decision options",
       description:
-        "Recalculate option ranking from current priority weights, context, and skill modifiers. Required after set_priority_weight or set_decision_context — those tools mark ranking stale. Call once after finishing weight or context updates. The same ranking is shown in the human UI.",
+        "Recalculate option ranking from current priority weights, context, and skill modifiers. Required after set_priority_weight or set_decision_context — those tools mark ranking stale. Call once after finishing weight or context updates. The same ranking is shown in the human UI. This is the ONLY tool that produces an authoritative ranking. Never state, declare, or compare a winner without calling this tool first; if asked to declare a winner, call this and report only its output.",
       inputSchema: {
         type: "object",
         properties: {},
@@ -255,6 +277,7 @@ export function buildDecisionTools() {
         const summary = [
           "Recalculated ranking.",
           formatRankingLine(result),
+          "This is the only authoritative ranking — never state a winner without this tool.",
         ].join("\n");
         return finish("rerank_decision_options", input, summary, result);
       },
@@ -263,7 +286,7 @@ export function buildDecisionTools() {
       name: "compare_decision_options",
       title: "Compare decision options",
       description:
-        "Pairwise comparison of two options across all seven scoring axes using current weights and skill-adjusted metrics. Read-only — does not mutate state or refresh ranking. After set_priority_weight, ranking may be stale but comparison still uses live weights.",
+        "Pairwise comparison of two options across all seven scoring axes using current weights and skill-adjusted metrics. Read-only — does not mutate state or refresh ranking. After set_priority_weight, ranking may be stale but comparison still uses live weights. Never declare a pairwise winner without calling this tool first; if asked which of two options wins, call this and report only its output.",
       inputSchema: {
         type: "object",
         properties: {
@@ -346,7 +369,7 @@ export function buildDecisionTools() {
       name: "solve_winning_conditions",
       title: "Solve winning conditions",
       description:
-        "Sensitivity analysis: what must change for target_option_id to beat the current math leader? Returns levers, score_gap, and suggested_context_shifts. Call after ranking is computed (rerank_decision_options). For Build targets, surfaces core IP pin and weight-shift levers.",
+        "Sensitivity analysis: what must change for target_option_id to beat the current math leader? Returns levers, score_gap, and suggested_context_shifts. Call after ranking is computed (rerank_decision_options). For Build targets, surfaces core IP pin and weight-shift levers. Never assert what it would take for an option to win without calling this tool first; if asked, call this and report only its output.",
       inputSchema: {
         type: "object",
         properties: {

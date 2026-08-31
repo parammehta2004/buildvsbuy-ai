@@ -2,7 +2,7 @@
 **Document:** `CONVO_HANDOFF.md`  
 **Generated At:** August 31, 2026 @ ~6:00 PM IST  
 **Calendar note:** Today is **31 August 2026** (not September). Deadline = **Sept 3, 2026 @ 1:00 PM PT**.  
-**Status:** Fronts 1–4 LOCKED · **Slice A SHIPPED** (`src/decision.js` = BuildVsBuy engine) · **Slice B SHIPPED** (`src/webmcp.js` = 9 WebMCP tools → store, each `execute` logs) · **Slice C SHIPPED** (`src/ui.js` + `src/style.css` + `index.html` = Front 3 Ink/Paper canvas, subscribes to store, `npm run build` GREEN) · next = **Slice D** (Act 1–3 harden + WebMCP fallback polish)
+**Status:** Fronts 1–4 LOCKED · **Slices A–D SHIPPED + PUSHED** (Chaos 5 hardening + **re-run PASS** Chrome WebMCP Aug 31 ~8:14 PM IST) · next = **Vercel deploy** → video → Devpost
 
 ---
 
@@ -107,8 +107,11 @@
 * 9 tool names in `src/webmcp.js` match locked spec exactly (create_decision … apply_human_preference_override).
 * Engine `CRITERION_KEYS` / `CRITERION_LABELS` / `DEFAULT_WEIGHTS` match Bible §6.2/§8.7b.
 
-### BLOCKER for Slice E (flag, not fixed)
-* **Not a git repo** — `git status` = `fatal: not a git repository`. Devpost requires a public GitHub repo with visible license. Need `git init` + remote + push before Vercel/Devpost. `.gitignore` exists so node_modules won't be committed.
+### BLOCKER for Slice E — RESOLVED (31 Aug ~7:05 PM IST)
+* **Public repo created + pushed:** https://github.com/parammehta2004/buildvsbuy-ai (PUBLIC, MIT license auto-detected, `main` tracking `origin/main`).
+* Commit `f9ec60b` = slices A–C + README + LICENSE + docs/mockups.
+* Two raw brainstorming `.txt` files deliberately **not committed** (messy internal notes, not secrets) — left untracked. Add later only if wanted.
+* **Still open:** Vercel deploy (live URL). Chaos 5 e2e re-run on localhost via ChatGPT Desktop (hardening shipped, proof not run).
 
 ### Ordered tasks for this calendar day
 1. ~~Plan Mode Slice A~~ ✅ done.
@@ -117,8 +120,9 @@
 4. ~~Plan + build Slice B~~ ✅ done (lint + smoke-webmcp green; build red only on `ui.js`).
 5. ~~Plan + build Slice C~~ ✅ done (lint + build + smoke-decision + smoke-webmcp green; `ui.js`/`style.css`/`index.html` = Front 3 Ink/Paper canvas).
 6. ~~Slice E file prep~~ ✅ done (README + LICENSE; git init still pending).
-7. **NEXT: Slice D** — Act 1–3 harden (ChatGPT in-app + Chrome WebMCP) + WebMCP fallback polish. Needs a public URL first → `git init` + Vercel deploy.
-8. **End of day:** Update this handoff with what shipped / blocked; new chat if context fat.
+7. ~~Slice D Chaos 5 in-app hardening~~ ✅ code shipped 31 Aug ~7:50–8:00 PM IST + **re-run PASS** 31 Aug ~8:14 PM IST (Chrome WebMCP; refused "Buy wins", called rerank, Adopt #1 / Buy 4th). WebMCP-absent fallback polish shipped locally (`main.js`/`ui.js`/`style.css`).
+8. ~~commit + push (Slice D + fallback + stress-test log)~~ ✅ done.
+9. **NEXT:** Vercel deploy (live URL).
 
 ### Explicitly NOT today
 * Video, Devpost, Scraping preset, theme bike-shedding, regenerating Paper mockup.
@@ -129,9 +133,9 @@
 ---
 
 ## 8. Next chat opening prompt (suggested)
-> Read `CONVO_HANDOFF.md` + Bible §6–8 + §11. Fronts 1–4 locked. Slice A+B+C SHIPPED (`src/decision.js` = BuildVsBuy engine; `src/webmcp.js` = 9 WebMCP tools → store, each `execute` calls `appendToolLog`; `src/ui.js` + `src/style.css` + `index.html` = Front 3 Ink/Paper canvas subscribing to store). `npm run lint` + `npm run build` + `smoke-decision` + `smoke-webmcp` all GREEN. Next: **Slice D only** — Act 1–3 harden (ChatGPT in-app + Chrome 149+ `#enable-webmcp-testing` Act 1–3 walk) + WebMCP-absent fallback polish. Do not re-open product design or UI layout. Note: 5-option smoke ranking is `adopt > hybrid > custom-x > build > buy`; 4-option §6.3 baseline `adopt > hybrid > build > buy` unchanged. Live-browser canvas walk still unverified from agent shell.
+> Read `CONVO_HANDOFF.md` + Bible §6–8 + §11. Fronts 1–4 locked. Slice A–D SHIPPED. Chaos 5 re-run **PASS** (Chrome WebMCP, Aug 31 ~8:14 PM IST — see `docs/stress-test-logs.md`). Next: commit/push + Vercel. Do not re-open product design or UI layout. 4-option §6.3 baseline `adopt > hybrid > build > buy` unchanged.
 
 ---
 
 ## 9. Docs sync note
-Handoff updated post-Slice-E-prep (31 Aug ~7:00 PM IST). Product locks unchanged. `decision.js` = BuildVsBuy engine (Slice A); `webmcp.js` = 9 WebMCP tools wired to store with per-execute tool logging (Slice B); `ui.js` + `style.css` + `index.html` = Front 3 Ink/Paper canvas subscribing to store (Slice C); `README.md` rewritten + `LICENSE` (MIT) added (Slice E file prep). `npm run lint` + `npm run build` GREEN (re-verified fresh). **Open:** `git init` + remote + Vercel deploy before Slice D in-app testing. Next = Slice D.
+Handoff updated 31 Aug ~8:32 PM IST after Slice D push. Product locks unchanged. **Public repo:** https://github.com/parammehta2004/buildvsbuy-ai (`main` = slices A–D + stress log). **Open:** Vercel deploy → video → Devpost.

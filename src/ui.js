@@ -1,0 +1,537 @@
+import {
+  CRITERION_KEYS,
+  CRITERION_LABELS,
+  getSnapshot,
+  loadAuthPreset,
+  rerankDecisionOptions,
+  setDecisionContext,
+  setPriorityWeight,
+  subscribe,
+} from "./decision.js";
+
+const EXPECTED_TOOLS = Object.freeze([
+  "create_decision",
+  "set_decision_context",
+  "add_option",
+  "set_priority_weight",
+  "rerank_decision_options",
+  "compare_decision_options",
+  "simulate_future_scenario",
+  "solve_winning_conditions",
+  "apply_human_preference_override",
+]);
+
+const SCALE_BANDS = Object.freeze(["<1k", "1k-10k", "10k-50k", "50k+"]);
+const COMPLIANCE_TIERS = Object.freeze(["none", "soc2", "hipaa"]);
+
+const TYPE_LABELS = Object.freeze({
+  build: "BUILD",
+  buy: "BUY",
+  open_source: "ADOPT",
+  hybrid: "HYBRID",
+});
+
+/** @type {"ink" | "paper"} */
+let currentTheme = "ink";
+
+/** @type {HTMLElement | null} */
+let appRoot = null;
+
+/** @type {(() => { source: "native" | "polyfill" | "unavailable", error: string | null, tools: Array<{ name: string, description?: string }> }) | null} */
+let getWebmcpRef = null;
+
+/**
+ * @param {HTMLElement} root
+ * @param {{ source: "native" | "polyfill" | "unavailable", error: string | null, tools: Array<{ name: string, description?: string }> }} webmcp
+ */
+export function renderApp(root, webmcp) {
+  const snapshot = getSnapshot();
+  document.documentElement.dataset.theme = currentTheme;
+
+  root.innerHTML = `
+    <div class="app">
+      ${renderHeader(snapshot, webmcp)}
+      <div class="main-grid">
+        <div class="main-column">
+          ${renderContextStrip(snapshot)}
+          ${snapshot.override.active ? renderOverrideBanner(snapshot) : ""}
+          ${renderCardsSection(snapshot)}
+          ${renderWeightsSection(snapshot)}
+        </div>
+        <aside class="right-rail">
+          ${renderToolLog(snapshot)}
+          ${renderLedger(snapshot)}
+        </aside>
+      </div>
+    </div>
+  `;
+
+  bindEvents(root, snapshot);
+}
+
+/**
+ * @param {ReturnType<typeof getSnapshot>} snapshot
+ * @param {{ source: "native" | "polyfill" | "unavailable", error: string | null, tools: Array<{ name: string, description?: string }> }} webmcp
+ */
+function renderHeader(snapshot, webmcp) {
+  const hasDecision = snapshot.options.length > 0;
+  const title = hasDecision ? snapshot.title : "BuildVsBuy.ai";
+  const problem = hasDecision
+    ? snapshot.problemStatement
+    : "When AI makes prototypes free, the scarce resource isn't building — it's knowing what's worth owning.";
+
+  return `
+    <header class="header">
+      <div class="header-brand">
+        <p class="brand">BuildVsBuy.ai</p>
+        ${hasDecision ? `<h1 class="decision-title">${escapeHtml(title)}</h1>` : ""}
+        <p class="problem-statement">${escapeHtml(problem)}</p>
+      </div>
+      <div class="header-actions">
+        ${renderWebmcpChip(webmcp)}
+        <button type="button" class="btn btn-ghost" id="theme-toggle" aria-label="Toggle theme">
+          ${currentTheme === "ink" ? "Paper theme" : "Ink theme"}
+        </button>
+        <button type="button" class="btn btn-primary" id="load-auth-preset">
+          Load Auth Preset
+        </button>
+      </div>
+    </header>
+  `;
+}
+
+/**
+ * @param {{ source: "native" | "polyfill" | "unavailable", error: string | null, tools: Array<{ name: string, description?: string }> }} webmcp
+ */
+function renderWebmcpChip(webmcp) {
+  if (webmcp.source === "unavailable") {
+    return `
+      <span class="webmcp-chip is-bad" title="${escapeHtml(webmcp.error || "WebMCP unavailable")}">
+        <span class="webmcp-dot" aria-hidden="true"></span>
+        WebMCP off
+      </span>
+    `;
+  }
+
+  const names = webmcp.tools.map((tool) => tool.name);
+  const allRegistered = EXPECTED_TOOLS.every((name) => names.includes(name));
+  const label = webmcp.source === "native" ? "WebMCP native" : "WebMCP polyfill";
+
+  return `
+    <span class="webmcp-chip ${allRegistered ? "is-ok" : "is-bad"}">
+      <span class="webmcp-dot" aria-hidden="true"></span>
+      ${allRegistered ? `${label} · connected` : `${label} · missing tools`}
+    </span>
+  `;
+}
+
+/**
+ * @param {ReturnType<typeof getSnapshot>} snapshot
+ */
+function renderContextStrip(snapshot) {
+  const orgLabel = formatOrgContext(snapshot.orgContext);
+  const skillLabel = formatSkillLevel(snapshot.skillLevel);
+  const timelineLabel =
+    snapshot.timelineDays != null ? `Timeline ${snapshot.timelineDays}d` : "Timeline —";
+
+  return `
+    <div class="context-strip" role="group" aria-label="Decision context">
+      <span class="context-chip is-display">${escapeHtml(orgLabel)}</span>
+      <span class="context-chip is-display">${escapeHtml(skillLabel)}</span>
+      <button type="button" class="context-chip is-toggle" data-context="scale_band" aria-pressed="false">
+        Scale ${escapeHtml(snapshot.scaleBand)}
+      </button>
+      <button type="button" class="context-chip is-toggle" data-context="compliance_tier" aria-pressed="false">
+        Compliance ${escapeHtml(snapshot.complianceTier)}
+      </button>
+      <button type="button" class="context-chip is-toggle ${snapshot.isCoreIp ? "is-active" : ""}" data-context="is_core_ip" aria-pressed="${snapshot.isCoreIp}">
+        Core IP: ${snapshot.isCoreIp ? "Yes" : "No"}
+      </button>
+      <span class="context-chip is-display">${escapeHtml(timelineLabel)}</span>
+    </div>
+  `;
+}
+
+/**
+ * @param {ReturnType<typeof getSnapshot>} snapshot
+ */
+function renderOverrideBanner(snapshot) {
+  const pinned = snapshot.options.find((o) => o.id === snapshot.override.pinnedOptionId);
+  const leader = snapshot.options.find((o) => o.id === snapshot.override.mathLeaderId);
+  const pinnedName = pinned?.name ?? snapshot.override.pinnedOptionId ?? "—";
+  const leaderName = leader?.name ?? snapshot.override.mathLeaderId ?? "—";
+  const gap = snapshot.override.scoreGap ?? 0;
+  const reason = snapshot.override.reason ?? "";
+
+  return `
+    <div class="override-banner" role="status">
+      <strong>Pinned:</strong> ${escapeHtml(pinnedName)}
+      · <strong>Math leader:</strong> ${escapeHtml(leaderName)}
+      · <strong>Gap:</strong> ${escapeHtml(String(gap))} pts
+      · <strong>Reason:</strong> ${escapeHtml(reason)}
+    </div>
+  `;
+}
+
+/**
+ * @param {ReturnType<typeof getSnapshot>} snapshot
+ */
+function renderCardsSection(snapshot) {
+  if (snapshot.options.length === 0) {
+    return `
+      <section class="cards-section" aria-label="Decision options">
+        <div class="cards-grid">
+          <p class="cards-empty">Waiting for decision…</p>
+        </div>
+      </section>
+    `;
+  }
+
+  const rankedById = new Map(snapshot.ranking.map((item) => [item.id, item]));
+  const orderedOptions = snapshot.rankingCurrent
+    ? [...snapshot.ranking]
+        .sort((a, b) => a.rank - b.rank)
+        .map((ranked) => snapshot.options.find((o) => o.id === ranked.id))
+        .filter(Boolean)
+    : snapshot.options;
+
+  return `
+    <section class="cards-section" aria-label="Decision options">
+      <div class="cards-grid">
+        ${orderedOptions.map((option) => renderOptionCard(option, snapshot, rankedById.get(option.id))).join("")}
+      </div>
+    </section>
+  `;
+}
+
+/**
+ * @param {import("./decision.js").DecisionOption} option
+ * @param {ReturnType<typeof getSnapshot>} snapshot
+ * @param {import("./decision.js").RankedOption | undefined} ranked
+ */
+function renderOptionCard(option, snapshot, ranked) {
+  const typeLabel = TYPE_LABELS[option.type] ?? option.type.toUpperCase();
+  const typeClass = option.type === "open_source" ? "type-adopt" : `type-${option.type}`;
+
+  let rankDisplay = "—";
+  let scoreDisplay = "—";
+  let isWinner = false;
+
+  if (snapshot.rankingCurrent && ranked) {
+    rankDisplay = String(ranked.rank);
+    scoreDisplay = ranked.displayScore.toFixed(1);
+    isWinner = ranked.rank === 1;
+  }
+
+  const isPinned = snapshot.override.active && snapshot.override.pinnedOptionId === option.id;
+  const isMathLeader = snapshot.override.active && snapshot.override.mathLeaderId === option.id;
+
+  const metrics = ranked?.metrics ?? deriveMetrics(option);
+  const cardClasses = [
+    "option-card",
+    isWinner && !isPinned ? "is-winner" : "",
+    isPinned ? "is-pinned" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return `
+    <article class="${cardClasses}">
+      <div class="card-header">
+        <span class="type-chip ${typeClass}">${escapeHtml(typeLabel)}</span>
+        <div class="card-badges">
+          ${isWinner && snapshot.rankingCurrent ? '<span class="badge badge-winner">Winner</span>' : ""}
+          ${isPinned ? '<span class="badge badge-override">Override</span>' : ""}
+          ${isMathLeader ? '<span class="badge badge-objective">Objective #1</span>' : ""}
+          ${option.estimate ? '<span class="badge badge-estimate">Estimate</span>' : ""}
+        </div>
+      </div>
+      <h3 class="card-name">${escapeHtml(option.name)}</h3>
+      <div class="card-rank-score">
+        <span class="rank-label">Rank <strong>#${escapeHtml(rankDisplay)}</strong></span>
+        <span class="score-label">${escapeHtml(scoreDisplay)}</span>
+      </div>
+      <dl class="card-metrics">
+        <div class="metric-row">
+          <dt>Time to prototype</dt>
+          <dd>${escapeHtml(formatHours(metrics.prototype_time_hours))}</dd>
+        </div>
+        <div class="metric-row">
+          <dt>Cash TCO (5yr)</dt>
+          <dd>${escapeHtml(formatMoney(metrics.cash_tco ?? option.monthly_cash_cost * 60))}</dd>
+        </div>
+        <div class="metric-row">
+          <dt>Monthly maintenance</dt>
+          <dd>${escapeHtml(formatMaintenance(metrics.monthly_maintenance_hours ?? option.monthly_maintenance_hours))}</dd>
+        </div>
+      </dl>
+    </article>
+  `;
+}
+
+/**
+ * @param {import("./decision.js").DecisionOption} option
+ */
+function deriveMetrics(option) {
+  return {
+    prototype_time_hours: option.prototype_time_hours,
+    cash_tco: option.monthly_cash_cost * 60,
+    monthly_maintenance_hours: option.monthly_maintenance_hours,
+  };
+}
+
+/**
+ * @param {ReturnType<typeof getSnapshot>} snapshot
+ */
+function renderWeightsSection(snapshot) {
+  const stale = snapshot.options.length > 0 && !snapshot.rankingCurrent;
+
+  return `
+    <section class="weights-section" aria-labelledby="weights-heading">
+      <div class="weights-header">
+        <h2 id="weights-heading">Priority weights</h2>
+        <div class="weights-actions">
+          ${stale ? '<div class="stale-banner">Weights are stale — re-rank to get updated scores.</div>' : ""}
+          <button type="button" class="btn btn-primary ${stale ? "is-highlight" : ""}" id="rerank-button">
+            Rerank
+          </button>
+        </div>
+      </div>
+      <div class="sliders-grid">
+        ${CRITERION_KEYS.map((key) => renderSlider(key, snapshot.weights[key])).join("")}
+      </div>
+    </section>
+  `;
+}
+
+/**
+ * @param {import("./decision.js").CriterionKey} criterion
+ * @param {number} weight
+ */
+function renderSlider(criterion, weight) {
+  const label = CRITERION_LABELS[criterion];
+  return `
+    <label class="slider-field" for="weight-${escapeHtml(criterion)}">
+      <span class="slider-label">${escapeHtml(label)}</span>
+      <span class="slider-value" id="weight-value-${escapeHtml(criterion)}">${escapeHtml(weight.toFixed(1))}</span>
+      <input
+        type="range"
+        id="weight-${escapeHtml(criterion)}"
+        name="${escapeHtml(criterion)}"
+        min="0"
+        max="10"
+        step="0.1"
+        value="${escapeHtml(String(weight))}"
+        data-criterion="${escapeHtml(criterion)}"
+      />
+    </label>
+  `;
+}
+
+/**
+ * @param {ReturnType<typeof getSnapshot>} snapshot
+ */
+function renderToolLog(snapshot) {
+  if (snapshot.toolLog.length === 0) {
+    return `
+      <section class="rail-panel" aria-labelledby="tool-log-heading">
+        <h2 id="tool-log-heading">Agent tool log</h2>
+        <p class="rail-empty">No tool calls yet.</p>
+      </section>
+    `;
+  }
+
+  return `
+    <section class="rail-panel" aria-labelledby="tool-log-heading">
+      <h2 id="tool-log-heading">Agent tool log</h2>
+      <ul class="tool-log-list">
+        ${snapshot.toolLog
+          .slice()
+          .reverse()
+          .map(
+            (entry) => `
+              <li class="tool-log-entry">
+                <time class="tool-log-time" datetime="${escapeHtml(entry.timestamp)}">${escapeHtml(formatTimestamp(entry.timestamp))}</time>
+                <code class="tool-log-name">${escapeHtml(entry.tool)}</code>
+                <span class="tool-log-summary">${escapeHtml(entry.summary)}</span>
+              </li>
+            `,
+          )
+          .join("")}
+      </ul>
+    </section>
+  `;
+}
+
+/**
+ * @param {ReturnType<typeof getSnapshot>} snapshot
+ */
+function renderLedger(snapshot) {
+  if (!snapshot.override.active || snapshot.liabilities.length === 0) {
+    return `
+      <section class="rail-panel" aria-labelledby="ledger-heading">
+        <h2 id="ledger-heading">Liability ledger</h2>
+        <p class="rail-empty">Empty until human override.</p>
+      </section>
+    `;
+  }
+
+  return `
+    <section class="rail-panel" aria-labelledby="ledger-heading">
+      <h2 id="ledger-heading">Liability ledger</h2>
+      <ul class="ledger-list">
+        ${snapshot.liabilities
+          .map(
+            (item) => `
+              <li class="ledger-entry severity-${escapeHtml(item.severity)}">
+                <p class="ledger-title">${escapeHtml(item.title)}</p>
+                <p class="ledger-desc">${escapeHtml(item.description)}</p>
+                <span class="ledger-severity">${escapeHtml(item.severity)}</span>
+              </li>
+            `,
+          )
+          .join("")}
+      </ul>
+    </section>
+  `;
+}
+
+/**
+ * @param {HTMLElement} root
+ * @param {ReturnType<typeof getSnapshot>} snapshot
+ */
+function bindEvents(root, snapshot) {
+  root.querySelector("#theme-toggle")?.addEventListener("click", () => {
+    currentTheme = currentTheme === "ink" ? "paper" : "ink";
+    document.documentElement.dataset.theme = currentTheme;
+    if (appRoot && getWebmcpRef) {
+      renderApp(appRoot, getWebmcpRef());
+    }
+  });
+
+  root.querySelector("#load-auth-preset")?.addEventListener("click", () => {
+    try {
+      loadAuthPreset();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : String(error));
+    }
+  });
+
+  root.querySelector("#rerank-button")?.addEventListener("click", () => {
+    try {
+      rerankDecisionOptions();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : String(error));
+    }
+  });
+
+  for (const button of root.querySelectorAll("[data-context]")) {
+    button.addEventListener("click", () => {
+      const key = button.getAttribute("data-context");
+      try {
+        if (key === "scale_band") {
+          const next = cycleValue(SCALE_BANDS, snapshot.scaleBand);
+          setDecisionContext({ scale_band: next });
+        } else if (key === "compliance_tier") {
+          const next = cycleValue(COMPLIANCE_TIERS, snapshot.complianceTier);
+          setDecisionContext({ compliance_tier: next });
+        } else if (key === "is_core_ip") {
+          setDecisionContext({ is_core_ip: !snapshot.isCoreIp });
+        }
+      } catch (error) {
+        window.alert(error instanceof Error ? error.message : String(error));
+      }
+    });
+  }
+
+  for (const input of root.querySelectorAll('input[type="range"][data-criterion]')) {
+    input.addEventListener("input", (event) => {
+      const target = /** @type {HTMLInputElement} */ (event.currentTarget);
+      const criterion = target.dataset.criterion;
+      const weight = Number(target.value);
+      const valueEl = root.querySelector(`#weight-value-${criterion}`);
+      if (valueEl) {
+        valueEl.textContent = weight.toFixed(1);
+      }
+      try {
+        setPriorityWeight({ criterion, weight });
+      } catch (error) {
+        window.alert(error instanceof Error ? error.message : String(error));
+      }
+    });
+  }
+}
+
+/**
+ * Re-render whenever the shared decision store changes.
+ * @param {HTMLElement} root
+ * @param {() => { source: "native" | "polyfill" | "unavailable", error: string | null, tools: Array<{ name: string, description?: string }> }} getWebmcp
+ */
+export function bindApp(root, getWebmcp) {
+  appRoot = root;
+  getWebmcpRef = getWebmcp;
+  const redraw = () => renderApp(root, getWebmcp());
+  subscribe(redraw);
+  redraw();
+}
+
+/**
+ * @template {string} T
+ * @param {readonly T[]} values
+ * @param {T} current
+ * @returns {T}
+ */
+function cycleValue(values, current) {
+  const index = values.indexOf(current);
+  return values[(index + 1) % values.length];
+}
+
+/** @param {string | undefined} value */
+function formatOrgContext(value) {
+  const labels = { solo: "Solo", startup: "Startup", enterprise: "Enterprise" };
+  return labels[value] ?? value ?? "—";
+}
+
+/** @param {string | undefined} value */
+function formatSkillLevel(value) {
+  const labels = { vibe: "Vibe", mid: "Mid", senior: "Senior" };
+  return labels[value] ?? value ?? "—";
+}
+
+/** @param {number} hours */
+function formatHours(hours) {
+  return `${hours}h`;
+}
+
+/** @param {number} hours */
+function formatMaintenance(hours) {
+  return `${hours}h/mo`;
+}
+
+/** @param {number} value */
+function formatMoney(value) {
+  return `$${Math.round(value).toLocaleString("en-US")}`;
+}
+
+/** @param {string} iso */
+function formatTimestamp(iso) {
+  try {
+    return new Date(iso).toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
+  } catch {
+    return iso;
+  }
+}
+
+/** @param {unknown} value */
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}

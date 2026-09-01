@@ -95,17 +95,24 @@ export function renderApp(root, webmcp) {
   }
 
   const pulseClass = (regionId) => (activePulse?.regionId === regionId ? " is-pulsed" : "");
+  const pulseBadge = (regionId) => {
+    if (activePulse?.regionId !== regionId) {
+      return "";
+    }
+    const source = activePulse.source;
+    return `<span class="pulse-source-chip source-${escapeHtml(source)}" title="Last change: ${escapeHtml(source)}">${escapeHtml(source)}</span>`;
+  };
 
   root.innerHTML = `
     <div class="app">
-      ${renderHeader(snapshot, webmcp, pulseClass)}
+      ${renderHeader(snapshot, webmcp, pulseClass, pulseBadge)}
       <div class="main-grid">
       <div class="main-column">
-        ${renderContextStrip(snapshot, pulseClass)}
+        ${renderContextStrip(snapshot, pulseClass, pulseBadge)}
         ${renderSimulationBanner(snapshot)}
         ${snapshot.override.active ? renderOverrideBanner(snapshot) : ""}
-        ${renderCardsSection(snapshot, pulseClass)}
-        ${renderWeightsSection(snapshot, pulseClass)}
+        ${renderCardsSection(snapshot, pulseClass, pulseBadge)}
+        ${renderWeightsSection(snapshot, pulseClass, pulseBadge)}
       </div>
         <aside class="right-rail">
           ${renderToolLog(snapshot)}
@@ -124,7 +131,7 @@ export function renderApp(root, webmcp) {
  * @param {ReturnType<typeof getSnapshot>} snapshot
  * @param {{ source: "native" | "polyfill" | "unavailable", error: string | null, tools: Array<{ name: string, description?: string }> }} webmcp
  */
-function renderHeader(snapshot, webmcp, pulseClass) {
+function renderHeader(snapshot, webmcp, pulseClass, pulseBadge) {
   const hasDecision = snapshot.options.length > 0;
   const title = hasDecision ? snapshot.title : "BuildVsBuy.ai";
   const problem = hasDecision
@@ -138,7 +145,7 @@ function renderHeader(snapshot, webmcp, pulseClass) {
     <header class="header">
       <div class="header-brand">
         <p class="brand">BuildVsBuy.ai</p>
-        ${renderPresetSwitcher(hasDecision, pulseClass)}
+        ${renderPresetSwitcher(hasDecision, pulseClass, pulseBadge)}
         ${hasDecision ? `<h1 class="decision-title">${escapeHtml(title)}</h1>` : ""}
         ${hasDecision ? `<p class="header-tagline">Demo scenario — structured estimates</p>` : ""}
         <p class="problem-statement">${escapeHtml(problem)}</p>
@@ -166,9 +173,10 @@ function renderHeader(snapshot, webmcp, pulseClass) {
  * Segmented preset switcher — Auth | Scraping. Neither highlighted until a preset loads.
  * @param {boolean} hasDecision
  */
-function renderPresetSwitcher(hasDecision, pulseClass) {
+function renderPresetSwitcher(hasDecision, pulseClass, pulseBadge) {
   return `
     <div class="preset-switcher${pulseClass("preset-switcher")}" id="preset-switcher" role="group" aria-label="Demo preset">
+      ${pulseBadge("preset-switcher")}
       <button
         type="button"
         class="preset-segment${hasDecision && currentPreset === "auth" ? " is-active" : ""}"
@@ -223,7 +231,7 @@ function renderWebmcpChip(webmcp) {
 /**
  * @param {ReturnType<typeof getSnapshot>} snapshot
  */
-function renderContextStrip(snapshot, pulseClass) {
+function renderContextStrip(snapshot, pulseClass, pulseBadge) {
   const orgLabel = formatOrgContext(snapshot.orgContext);
   const skillLabel = formatSkillLevel(snapshot.skillLevel);
   const timelineLabel =
@@ -231,6 +239,7 @@ function renderContextStrip(snapshot, pulseClass) {
 
   return `
     <div class="context-strip${pulseClass("context-strip")}" id="context-strip" role="group" aria-label="Decision context">
+      ${pulseBadge("context-strip")}
       <span class="context-chip is-display">${escapeHtml(orgLabel)}</span>
       <span class="context-chip is-display">${escapeHtml(skillLabel)}</span>
       <button
@@ -298,10 +307,11 @@ function renderOverrideBanner(snapshot) {
 /**
  * @param {ReturnType<typeof getSnapshot>} snapshot
  */
-function renderCardsSection(snapshot, pulseClass) {
+function renderCardsSection(snapshot, pulseClass, pulseBadge) {
   if (snapshot.options.length === 0) {
     return `
-      <section class="cards-section" id="cards-section" aria-label="Decision options">
+      <section class="cards-section${pulseClass("cards-section")}" id="cards-section" aria-label="Decision options">
+        ${pulseBadge("cards-section")}
         <div class="cards-grid cards-empty-state">
           <p class="cards-empty">Waiting for decision…</p>
           <p class="cards-empty-hint">Agent: call <code>create_decision</code> with preset <code>auth</code> or <code>scraping</code>. Human: pick a preset above.</p>
@@ -322,6 +332,7 @@ function renderCardsSection(snapshot, pulseClass) {
 
   return `
     <section class="cards-section${pulseClass("cards-section")}" id="cards-section" aria-label="Decision options">
+      ${pulseBadge("cards-section")}
       <div class="cards-grid">
         ${orderedOptions.map((option) => renderOptionCard(option, snapshot, rankedById.get(option.id))).join("")}
       </div>
@@ -412,11 +423,12 @@ function deriveMetrics(option) {
 /**
  * @param {ReturnType<typeof getSnapshot>} snapshot
  */
-function renderWeightsSection(snapshot, pulseClass) {
+function renderWeightsSection(snapshot, pulseClass, pulseBadge) {
   const stale = snapshot.options.length > 0 && !snapshot.rankingCurrent;
 
   return `
     <section class="weights-section${pulseClass("weights-section")}" id="weights-section" aria-labelledby="weights-heading">
+      ${pulseBadge("weights-section")}
       <div class="weights-header">
         <h2 id="weights-heading">Priority weights</h2>
         <div class="weights-actions">

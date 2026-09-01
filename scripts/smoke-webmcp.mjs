@@ -105,6 +105,12 @@ async function runFlow() {
     second_option_id: "adopt",
   });
   assert(compareResult.content[0].text.includes("Tradeoffs"), "Compare should return tradeoffs");
+  snap = getSnapshot();
+  assert(snap.lastInsight?.tool === "compare_decision_options", "lastInsight should be set after compare");
+  assert(
+    snap.lastInsight?.payload && typeof snap.lastInsight.payload === "object" && "winner" in snap.lastInsight.payload,
+    "lastInsight payload should include compare winner",
+  );
 
   console.log("Smoke: 7 set_decision_context");
   await tools.set_decision_context.execute({
@@ -138,6 +144,12 @@ async function runFlow() {
   const solveParsed = JSON.parse(solveText.split("\n\n").pop());
   assert(Array.isArray(solveParsed.levers) && solveParsed.levers.length > 0, "Solve should return levers");
   assert(typeof solveParsed.score_gap === "number" && solveParsed.score_gap >= 0, "score_gap should be >= 0");
+  snap = getSnapshot();
+  assert(snap.lastInsight?.tool === "solve_winning_conditions", "lastInsight should be set after solve");
+  assert(
+    Array.isArray(snap.lastInsight?.payload?.levers) && snap.lastInsight.payload.levers.length > 0,
+    "lastInsight payload should include solve levers",
+  );
 
   console.log("Smoke: 10 apply_human_preference_override");
   const overrideText = (

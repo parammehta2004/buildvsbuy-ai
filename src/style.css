@@ -1072,6 +1072,39 @@ details.tool-log-entry summary::-webkit-details-marker {
   }
 }
 
+#context-strip,
+#cards-section,
+#weights-section,
+#preset-switcher {
+  position: relative;
+}
+
+.pulse-source-chip {
+  position: absolute;
+  top: -8px;
+  right: 8px;
+  z-index: 2;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+.pulse-source-chip.source-agent {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+.pulse-source-chip.source-human {
+  background: var(--chip-bg);
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+
 .is-pulsed {
   animation: region-pulse 2s ease-out;
   border-radius: 8px;

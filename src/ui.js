@@ -36,8 +36,8 @@ const TYPE_LABELS = Object.freeze({
 /** @type {"ink" | "paper"} */
 let currentTheme = "ink";
 
-/** @type {"auth" | "scraping"} */
-let currentPreset = "auth";
+/** @type {"auth" | "scraping" | null} */
+let currentPreset = null;
 
 /** @type {number | null} */
 let themeTransitionTimer = null;
@@ -67,6 +67,13 @@ function applyTheme(theme) {
 export function renderApp(root, webmcp) {
   const snapshot = getSnapshot();
   document.documentElement.dataset.theme = currentTheme;
+
+  // Sync preset tracker from store (agent create_decision) or clear when empty.
+  if (snapshot.options.length > 0 && (snapshot.preset === "auth" || snapshot.preset === "scraping")) {
+    currentPreset = snapshot.preset;
+  } else if (snapshot.options.length === 0) {
+    currentPreset = null;
+  }
 
   root.innerHTML = `
     <div class="app">
@@ -100,12 +107,15 @@ function renderHeader(snapshot, webmcp) {
   const problem = hasDecision
     ? snapshot.problemStatement
     : "When AI makes prototypes free, the scarce resource isn't building — it's knowing what's worth owning.";
+  const resetTitle = hasDecision
+    ? `Reset ${currentPreset === "scraping" ? "Scraping" : "Auth"} demo to Solo · 1k–10k · 14d`
+    : "Load a preset with Auth or Scraping above";
 
   return `
     <header class="header">
       <div class="header-brand">
         <p class="brand">BuildVsBuy.ai</p>
-        ${renderPresetSwitcher()}
+        ${renderPresetSwitcher(hasDecision)}
         ${hasDecision ? `<h1 class="decision-title">${escapeHtml(title)}</h1>` : ""}
         ${hasDecision ? `<p class="header-tagline">Demo scenario — structured estimates</p>` : ""}
         <p class="problem-statement">${escapeHtml(problem)}</p>
@@ -115,7 +125,13 @@ function renderHeader(snapshot, webmcp) {
         <button type="button" class="btn btn-ghost" id="theme-toggle" aria-label="Toggle theme">
           ${currentTheme === "ink" ? "Paper theme" : "Ink theme"}
         </button>
-        <button type="button" class="btn btn-ghost" id="load-auth-preset" title="Reset ${currentPreset === "scraping" ? "Scraping" : "Auth"} demo to Solo · 1k–10k · 14d">
+        <button
+          type="button"
+          class="btn btn-ghost"
+          id="load-auth-preset"
+          title="${escapeHtml(resetTitle)}"
+          ${hasDecision ? "" : "disabled"}
+        >
           Reset demo
         </button>
       </div>
@@ -124,22 +140,23 @@ function renderHeader(snapshot, webmcp) {
 }
 
 /**
- * Segmented preset switcher — Auth (default boot) | Scraping.
+ * Segmented preset switcher — Auth | Scraping. Neither highlighted until a preset loads.
+ * @param {boolean} hasDecision
  */
-function renderPresetSwitcher() {
+function renderPresetSwitcher(hasDecision) {
   return `
     <div class="preset-switcher" role="group" aria-label="Demo preset">
       <button
         type="button"
-        class="preset-segment${currentPreset === "auth" ? " is-active" : ""}"
+        class="preset-segment${hasDecision && currentPreset === "auth" ? " is-active" : ""}"
         data-preset-switch="auth"
-        aria-pressed="${currentPreset === "auth"}"
+        aria-pressed="${hasDecision && currentPreset === "auth"}"
       >Auth</button>
       <button
         type="button"
-        class="preset-segment${currentPreset === "scraping" ? " is-active" : ""}"
+        class="preset-segment${hasDecision && currentPreset === "scraping" ? " is-active" : ""}"
         data-preset-switch="scraping"
-        aria-pressed="${currentPreset === "scraping"}"
+        aria-pressed="${hasDecision && currentPreset === "scraping"}"
       >Scraping</button>
     </div>
   `;
@@ -262,8 +279,9 @@ function renderCardsSection(snapshot) {
   if (snapshot.options.length === 0) {
     return `
       <section class="cards-section" aria-label="Decision options">
-        <div class="cards-grid">
+        <div class="cards-grid cards-empty-state">
           <p class="cards-empty">Waiting for decision…</p>
+          <p class="cards-empty-hint">Agent: call <code>create_decision</code> with preset <code>auth</code> or <code>scraping</code>. Human: pick a preset above.</p>
         </div>
       </section>
     `;
@@ -303,7 +321,7 @@ function renderOptionCard(option, snapshot, ranked) {
 
   if (snapshot.rankingCurrent && ranked) {
     rankDisplay = String(ranked.rank);
-    scoreDisplay = ranked.displayScore.toFixed(1);
+    scoreDisplay = formatCardScore(snapshot, ranked);
     isWinner = ranked.rank === 1;
   }
 
@@ -542,6 +560,9 @@ function bindEvents(root, snapshot) {
   });
 
   root.querySelector("#load-auth-preset")?.addEventListener("click", () => {
+    if (snapshot.options.length === 0) {
+      return;
+    }
     try {
       if (currentPreset === "scraping") {
         loadScrapingDemo();
@@ -571,7 +592,7 @@ function bindEvents(root, snapshot) {
       if (preset !== "auth" && preset !== "scraping") {
         return;
       }
-      if (preset === currentPreset) {
+      if (preset === currentPreset && snapshot.options.length > 0) {
         return;
       }
       try {
@@ -580,16 +601,16 @@ function bindEvents(root, snapshot) {
           loadScrapingDemo();
           appendToolLog({
             tool: "create_decision",
-            input: { preset: "scraping", action: "switch" },
-            summary: "Human: switched to Scraping preset",
+            input: { preset: "scraping", action: snapshot.options.length > 0 ? "switch" : "load" },
+            summary: snapshot.options.length > 0 ? "Human: switched to Scraping preset" : "Human: loaded Scraping preset",
             source: "human",
           });
         } else {
           loadDefaultDemo();
           appendToolLog({
             tool: "create_decision",
-            input: { preset: "auth", action: "switch" },
-            summary: "Human: switched to Auth preset",
+            input: { preset: "auth", action: snapshot.options.length > 0 ? "switch" : "load" },
+            summary: snapshot.options.length > 0 ? "Human: switched to Auth preset" : "Human: loaded Auth preset",
             source: "human",
           });
         }
@@ -715,6 +736,18 @@ export function setCurrentPreset(next) {
 function cycleValue(values, current) {
   const index = values.indexOf(current);
   return values[(index + 1) % values.length];
+}
+
+/** @param {ReturnType<typeof getSnapshot>} snapshot
+ * @param {import("./decision.js").RankedOption} ranked
+ */
+function formatCardScore(snapshot, ranked) {
+  const oneDpValues = snapshot.ranking.map((item) => item.displayScore.toFixed(1));
+  const allSameAtOneDp = new Set(oneDpValues).size === 1 && snapshot.ranking.length > 1;
+  if (allSameAtOneDp) {
+    return ranked.score.toFixed(2);
+  }
+  return ranked.displayScore.toFixed(1);
 }
 
 /** @param {string | undefined} value */

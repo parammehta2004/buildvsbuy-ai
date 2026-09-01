@@ -43,6 +43,7 @@ async function boot() {
     setCurrentPreset("scraping");
     loadScrapingDemo();
   } else if (bootPreset === "auth") {
+    setCurrentPreset("auth");
     loadDefaultDemo();
   }
 

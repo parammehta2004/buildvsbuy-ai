@@ -99,22 +99,23 @@ assert(
 );
 const scrapingIds = rankIds(scraping);
 console.log("Scraping neutral ranking:", scrapingIds.join(" > "));
-// Locked neutral order (vibe skill, default weights, Solo · 1k–10k) — distinct from Auth (Build 3rd, Buy last).
+// Locked neutral order (vibe skill, default weights, Solo · 1k–10k) — distinct from Auth (adopt-led).
+// Scraping story: managed API wins on speed + low ops; self-host Crawl4AI trails on solo vibe maintenance.
 assert(
-  scrapingIds[0] === "adopt",
-  `Scraping neutral leader should be adopt, got: ${scrapingIds.join(", ")}`,
+  scrapingIds[0] === "buy",
+  `Scraping neutral leader should be buy, got: ${scrapingIds.join(", ")}`,
 );
 assert(
   scrapingIds[1] === "hybrid",
   `Scraping neutral 2nd should be hybrid, got: ${scrapingIds.join(", ")}`,
 );
 assert(
-  scrapingIds[2] === "buy",
-  `Scraping neutral 3rd should be buy, got: ${scrapingIds.join(", ")}`,
+  scrapingIds[2] === "build",
+  `Scraping neutral 3rd should be build, got: ${scrapingIds.join(", ")}`,
 );
 assert(
-  scrapingIds[3] === "build",
-  `Scraping neutral last should be build, got: ${scrapingIds.join(", ")}`,
+  scrapingIds[3] === "adopt",
+  `Scraping neutral last should be adopt, got: ${scrapingIds.join(", ")}`,
 );
 
 console.log("PASS: Slice A decision engine smoke tests");

@@ -250,7 +250,9 @@ Display scores to **1 decimal**. Tool copy: estimates, not accounting.
 
 ## 7. WebMCP Tool Surface Specification (Front 2 v2 — 9 Tools LOCKED)
 
-Imperative registration only: `document.modelContext.registerTool(...)`. Every `execute` appends to the Agent Tool Execution Log.
+Imperative registration only: `document.modelContext.registerTool(...)`. Every `execute` appends to the Tool log with `source: "agent"`.
+
+**`create_decision` presets (live):** `auth` seeds the Authentication flagship (4 options). `scraping` seeds AI Web Scraping (4 options, author estimates). `custom` or omit preset for a blank slate — then `add_option` per candidate.
 
 ### 7.1 Catalog of WebMCP Tools
 
@@ -489,16 +491,16 @@ Target Video Length: **2 minutes 45 seconds** (Safe within < 3:00 rule).
 
 ### 11.1 Rebaseline schedule (targets, not rigid contracts)
 
-**As of Mon 31 Aug 2026 (~6:57 PM IST):** Aug 30 window produced spec lock only; Aug 31 shipped **Slice A** (`src/decision.js` = BuildVsBuy engine), **Slice B** (`src/webmcp.js` = 9 WebMCP tools wired to store, each `execute` logs), and **Slice C** (`src/ui.js` + `src/style.css` + `index.html` = Front 3 Ink/Paper canvas subscribing to `getSnapshot`; human controls call the same store APIs as the 9 tools). `npm run lint` + `npm run build` + `smoke-decision` + `smoke-webmcp` all GREEN. Model split executed: GLM 5.2 plan/contract, Gemini 3.1 Pro paint per `design.md` + Ink PNG SoT, fresh independent verify (engine files frozen — mtimes predate C). Live-browser canvas walk still unverified from agent shell. Live slice-by-slice status lives in `CONVO_HANDOFF.md`; this §11.1 stays the rebaseline schedule.
+**As of 01-09-2026:** Slices A–G shipped. Live URL: https://webmcp-playground-three.vercel.app. `npm run lint` + `npm run build` + `smoke-decision` + `smoke-webmcp` GREEN. Slice G added human tool log, favicon/meta, Scraping preset + header switcher. Next: Slice F (video + Devpost). Live slice-by-slice status in `CONVO_HANDOFF.md`.
 
 | Window | Target work | Done when |
 |---|---|---|
-| **Aug 31 (TODAY)** | Slice A (`decision.js`) + Slice B (9 tools) + Slice C (UI+themes) — all shipped | Store replaces property lab; tools register; canvas mockup-aligned; `npm run build` GREEN |
-| **Sept 1** | Slice D — ChatGPT Desktop / Chrome WebMCP Act 1–3 harden + fallback polish | Honest demo arc green; WebMCP absent = graceful UI |
-| **Sept 2** | Record &lt;3:00 video per §9 (Slice F start) | Public YouTube link |
-| **Sept 3 AM** | MIT, README, public repo, Vercel URL, Devpost §10 (Slice E+F) | Submitted before 1 PM PT |
+| **Aug 31** | Slices A–C | Store + 9 tools + Ink/Paper canvas; build GREEN |
+| **Sept 1** | Slices D–G | Act harden, deploy, human log, Scraping preset |
+| **Sept 2** | Slice F (video) | Public YouTube link &lt;3:00 |
+| **Sept 3 AM** | Devpost §10 | Submitted before 1 PM PT |
 
-If Aug 31 runs slow: cut Scraping preset, tradeoff sparklines, Paper PNG regen — **never** cut 9 tools, pin/gap/ledger, or Act 1–3 honesty.
+**Cut line (if time slips on Slice F):** tradeoff sparklines, Paper PNG regen — **never** cut 9 tools, Auth Act 1–3 honesty, pin/gap/ledger, or human tool log.
 
 ### 11.2 IDE / agent build system (LOCKED method)
 

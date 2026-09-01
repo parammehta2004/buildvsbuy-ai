@@ -27,7 +27,7 @@ Traditional agents browse pages by screenshot scraping and simulated clicks — 
 | **ADOPT** | Better-Auth | Crawl4AI (self-hosted) |
 | **HYBRID** | Supabase Auth + Postgres RLS | Playwright + Bright Data proxies |
 
-Use the header **Auth | Scraping** switcher (or `create_decision({ preset: "scraping" })` via WebMCP) to load the scraping scenario. Boot defaults to Auth for the demo video script.
+Use the header **Auth | Scraping** switcher (or `create_decision({ preset: "scraping" })` via WebMCP) to load the scraping scenario. Boot defaults to Auth for the demo video script. Neutral Scraping rank under default weights is **Buy > Hybrid > Build > Adopt** (managed API leads; self-host Crawl4AI trails on solo vibe maintenance) — unlike Auth's Adopt-led order.
 
 ## Seven scoring axes (no double-count)
 

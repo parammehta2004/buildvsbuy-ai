@@ -116,7 +116,7 @@
 
 ### Slice G — SHIPPED (01-09-2026)
 * **G1:** Human tool log (`source: human|agent`), favicon + OG meta, copy pass (Tool log rename, disclaimer).
-* **G2:** `SCRAPING_PRESET_OPTIONS` + `loadScrapingDemo()`, header `[ Auth | Scraping ]` segmented switcher, `currentPreset` reset routing, WebMCP `create_decision` scraping enum live, smoke-decision scraping asserts (neutral `adopt > hybrid > buy > build`), README scraping row, Bible §8.2/§11.2 sync.
+* **G2:** `SCRAPING_PRESET_OPTIONS` + `loadScrapingDemo()`, header `[ Auth | Scraping ]` segmented switcher, `currentPreset` reset routing, WebMCP `create_decision` scraping enum live, smoke-decision scraping asserts (neutral **`buy > hybrid > build > adopt`** — distinct from Auth), README scraping row, Bible §7/§8.2/§11 sync.
 * **Live:** https://webmcp-playground-three.vercel.app (Vercel auto-deploy from `main`).
 
 ### Ordered tasks (updated)

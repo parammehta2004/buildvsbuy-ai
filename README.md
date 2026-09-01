@@ -6,6 +6,8 @@ An AI-native **build-vs-buy** decision environment where humans and browser-inte
 
 Built for the [OpenAI WebMCP Challenge](https://webmcp.devpost.com/).
 
+**Live demo:** https://webmcp-playground-three.vercel.app
+
 ## Why WebMCP is a native fit
 
 Traditional agents browse pages by screenshot scraping and simulated clicks — brittle, lossy, and stateless. BuildVsBuy.ai exposes **clean, typed, deterministic tools** directly to the browser-integrated agent via `document.modelContext.registerTool`. The web page becomes a programmable canvas where the human and agent co-manipulate **one shared decision model**:
@@ -62,7 +64,7 @@ npm install
 npm run dev
 ```
 
-Open the printed localhost URL (Vite defaults to `http://localhost:5173`). WebMCP needs a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts): localhost and HTTPS count.
+Open the printed localhost URL (Vite defaults to `http://localhost:5173`) or the [live demo](https://webmcp-playground-three.vercel.app). WebMCP needs a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts): localhost and HTTPS count.
 
 ```bash
 npm run build

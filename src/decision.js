@@ -609,6 +609,13 @@ export function loadAuthPreset() {
   return createDecision({ preset: "auth" });
 }
 
+/** Auth preset with Act 1 demo defaults: Solo org, 1k–10k scale, 14-day timeline, ranked. */
+export function loadDefaultDemo() {
+  createDecision({ preset: "auth", org_context: "solo" });
+  setDecisionContext({ scale_band: "1k-10k", timeline_days: 14 });
+  return rerankDecisionOptions();
+}
+
 /**
  * @param {{
  *   scale_band?: ScaleBand,

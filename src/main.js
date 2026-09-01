@@ -1,3 +1,4 @@
+import { loadDefaultDemo } from "./decision.js";
 import { bindApp } from "./ui.js";
 import { installDocumentModelContext } from "./polyfill.js";
 import { getRegisteredTools, registerDecisionTools } from "./webmcp.js";
@@ -33,6 +34,7 @@ async function boot() {
     }
   }
 
+  loadDefaultDemo();
   bindApp(root, () => webmcp);
 }
 

@@ -2,7 +2,7 @@ import {
   CRITERION_KEYS,
   CRITERION_LABELS,
   getSnapshot,
-  loadAuthPreset,
+  loadDefaultDemo,
   rerankDecisionOptions,
   setDecisionContext,
   setPriorityWeight,
@@ -107,8 +107,8 @@ function renderHeader(snapshot, webmcp) {
         <button type="button" class="btn btn-ghost" id="theme-toggle" aria-label="Toggle theme">
           ${currentTheme === "ink" ? "Paper theme" : "Ink theme"}
         </button>
-        <button type="button" class="btn btn-primary" id="load-auth-preset">
-          Load Auth Preset
+        <button type="button" class="btn btn-ghost" id="load-auth-preset" title="Reset Auth demo to Solo · 1k–10k · 14d">
+          Reset demo
         </button>
       </div>
     </header>
@@ -482,7 +482,7 @@ function bindEvents(root, snapshot) {
 
   root.querySelector("#load-auth-preset")?.addEventListener("click", () => {
     try {
-      loadAuthPreset();
+      loadDefaultDemo();
     } catch (error) {
       window.alert(error instanceof Error ? error.message : String(error));
     }

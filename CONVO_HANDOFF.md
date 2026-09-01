@@ -1,8 +1,8 @@
 # WebMCP Hackathon — Session Handoff & Context Bridge
 **Document:** `CONVO_HANDOFF.md`  
-**Generated At:** August 31, 2026 @ ~6:00 PM IST  
-**Calendar note:** Today is **31 August 2026** (not September). Deadline = **Sept 3, 2026 @ 1:00 PM PT**.  
-**Status:** Fronts 1–4 LOCKED · **Slices A–D SHIPPED + PUSHED** (Chaos 5 hardening + **re-run PASS** Chrome WebMCP Aug 31 ~8:14 PM IST) · next = **Vercel deploy** → video → Devpost
+**Generated At:** 01-09-2026  
+**Calendar note:** Deadline = **03-09-2026 @ 1:00 PM PT**.  
+**Status:** Fronts 1–4 LOCKED · **Slices A–G SHIPPED** · live URL https://webmcp-playground-three.vercel.app · GitHub↔Vercel connected · **next = Slice F** (video + Devpost)
 
 ---
 
@@ -36,7 +36,8 @@
 | **ADOPT** | Better-Auth only |
 | **HYBRID** | Supabase Auth + Postgres RLS |
 
-* Auth preset = demo default. Scraping = later. Custom = `estimate: true` until confirmed.
+* Auth preset = demo default (boot). Scraping preset = header switcher or `create_decision({ preset: "scraping" })`. Custom = `estimate: true` until confirmed.
+* **Known edge:** `currentPreset` tracked in `ui.js` module scope — agent-driven `create_decision({ preset: "scraping" })` without UI switch won't update the tracker; Reset could reload Auth. Acceptable for demo.
 * **3-act demo:** Act1 two beats — (a) neutral weights `Adopt > Hybrid > Build > Buy` (Build≈Buy tied bottom); (b) speed-bias `set_priority_weight(time_to_prototype, 9)` → Build drops to last (the vibe trap; crossover `w_ttp > 8.5`) · Act2 `soc2` and/or `50k+` MRU · Act3 core IP → pin + gap + Liability Ledger.
 
 ---
@@ -113,29 +114,24 @@
 * Two raw brainstorming `.txt` files deliberately **not committed** (messy internal notes, not secrets) — left untracked. Add later only if wanted.
 * **Still open:** Vercel deploy (live URL). Chaos 5 e2e re-run on localhost via ChatGPT Desktop (hardening shipped, proof not run).
 
-### Ordered tasks for this calendar day
-1. ~~Plan Mode Slice A~~ ✅ done.
-2. ~~Navigator approves~~ ✅ done.
-3. ~~Build Slice A~~ ✅ done (lint + smoke green; build intentionally red until B/C).
-4. ~~Plan + build Slice B~~ ✅ done (lint + smoke-webmcp green; build red only on `ui.js`).
-5. ~~Plan + build Slice C~~ ✅ done (lint + build + smoke-decision + smoke-webmcp green; `ui.js`/`style.css`/`index.html` = Front 3 Ink/Paper canvas).
-6. ~~Slice E file prep~~ ✅ done (README + LICENSE; git init still pending).
-7. ~~Slice D Chaos 5 in-app hardening~~ ✅ code shipped 31 Aug ~7:50–8:00 PM IST + **re-run PASS** 31 Aug ~8:14 PM IST (Chrome WebMCP; refused "Buy wins", called rerank, Adopt #1 / Buy 4th). WebMCP-absent fallback polish shipped locally (`main.js`/`ui.js`/`style.css`).
-8. ~~commit + push (Slice D + fallback + stress-test log)~~ ✅ done.
-9. **NEXT:** Vercel deploy (live URL).
+### Slice G — SHIPPED (01-09-2026)
+* **G1:** Human tool log (`source: human|agent`), favicon + OG meta, copy pass (Tool log rename, disclaimer).
+* **G2:** `SCRAPING_PRESET_OPTIONS` + `loadScrapingDemo()`, header `[ Auth | Scraping ]` segmented switcher, `currentPreset` reset routing, WebMCP `create_decision` scraping enum live, smoke-decision scraping asserts (neutral `adopt > hybrid > buy > build`), README scraping row, Bible §8.2/§11.2 sync.
+* **Live:** https://webmcp-playground-three.vercel.app (Vercel auto-deploy from `main`).
 
-### Explicitly NOT today
-* Video, Devpost, Scraping preset, theme bike-shedding, regenerating Paper mockup.
+### Ordered tasks (updated)
+1. ~~Slices A–G~~ ✅ done.
+2. **NEXT:** Slice F — record &lt;3:00 video + Devpost package.
 
-### Tomorrow (Sept 1) if today hits A+B+C
-* Slice D Act harden (ChatGPT in-app + Chrome WebMCP Act 1–3) + fallback polish.
+### Explicitly NOT blocking ship
+* Video, Devpost (Slice F — parallel track).
 
 ---
 
 ## 8. Next chat opening prompt (suggested)
-> Read `CONVO_HANDOFF.md` + Bible §6–8 + §11. Fronts 1–4 locked. Slice A–D SHIPPED. Chaos 5 re-run **PASS** (Chrome WebMCP, Aug 31 ~8:14 PM IST — see `docs/stress-test-logs.md`). Next: commit/push + Vercel. Do not re-open product design or UI layout. 4-option §6.3 baseline `adopt > hybrid > build > buy` unchanged.
+> Read `CONVO_HANDOFF.md` + Bible §6–8 + §11. Fronts 1–4 locked. Slices A–G SHIPPED. Live URL: https://webmcp-playground-three.vercel.app. Next: Slice F video + Devpost. Do not re-open product design or UI layout.
 
 ---
 
 ## 9. Docs sync note
-Handoff updated 31 Aug ~8:32 PM IST after Slice D push. Product locks unchanged. **Public repo:** https://github.com/parammehta2004/buildvsbuy-ai (`main` = slices A–D + stress log). **Open:** Vercel deploy → video → Devpost.
+Handoff updated 01-09-2026 after Slice G (Scraping preset + preset switcher). Product locks unchanged. **Public repo:** https://github.com/parammehta2004/buildvsbuy-ai. **Live:** https://webmcp-playground-three.vercel.app.

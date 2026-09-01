@@ -1,5 +1,6 @@
 import {
   loadAuthPreset,
+  loadScrapingDemo,
   rerankDecisionOptions,
   setDecisionContext,
   simulateFutureScenario,
@@ -87,5 +88,33 @@ appendToolLog({
   summary: "Slice A smoke harness passed",
 });
 assert(getSnapshot().toolLog.length === 1, "Tool log should accept appendToolLog entries");
+
+console.log("Smoke: load Scraping preset");
+const scraping = loadScrapingDemo();
+assert(scraping.options.length === 4, "Scraping preset should seed 4 options");
+assert(scraping.rankingCurrent === true, "loadScrapingDemo should rerank");
+assert(
+  scraping.options.every((option) => option.estimate === false),
+  "Scraping preset options should have estimate: false",
+);
+const scrapingIds = rankIds(scraping);
+console.log("Scraping neutral ranking:", scrapingIds.join(" > "));
+// Locked neutral order (vibe skill, default weights, Solo · 1k–10k) — distinct from Auth (Build 3rd, Buy last).
+assert(
+  scrapingIds[0] === "adopt",
+  `Scraping neutral leader should be adopt, got: ${scrapingIds.join(", ")}`,
+);
+assert(
+  scrapingIds[1] === "hybrid",
+  `Scraping neutral 2nd should be hybrid, got: ${scrapingIds.join(", ")}`,
+);
+assert(
+  scrapingIds[2] === "buy",
+  `Scraping neutral 3rd should be buy, got: ${scrapingIds.join(", ")}`,
+);
+assert(
+  scrapingIds[3] === "build",
+  `Scraping neutral last should be build, got: ${scrapingIds.join(", ")}`,
+);
 
 console.log("PASS: Slice A decision engine smoke tests");

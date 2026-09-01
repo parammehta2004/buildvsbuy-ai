@@ -1,8 +1,10 @@
 import {
   CRITERION_KEYS,
   CRITERION_LABELS,
+  appendToolLog,
   getSnapshot,
   loadDefaultDemo,
+  loadScrapingDemo,
   rerankDecisionOptions,
   setDecisionContext,
   setPriorityWeight,
@@ -33,6 +35,9 @@ const TYPE_LABELS = Object.freeze({
 
 /** @type {"ink" | "paper"} */
 let currentTheme = "ink";
+
+/** @type {"auth" | "scraping"} */
+let currentPreset = "auth";
 
 /** @type {number | null} */
 let themeTransitionTimer = null;
@@ -99,7 +104,9 @@ function renderHeader(snapshot, webmcp) {
     <header class="header">
       <div class="header-brand">
         <p class="brand">BuildVsBuy.ai</p>
+        ${renderPresetSwitcher()}
         ${hasDecision ? `<h1 class="decision-title">${escapeHtml(title)}</h1>` : ""}
+        ${hasDecision ? `<p class="header-tagline">Demo scenario — structured estimates</p>` : ""}
         <p class="problem-statement">${escapeHtml(problem)}</p>
       </div>
       <div class="header-actions">
@@ -107,11 +114,33 @@ function renderHeader(snapshot, webmcp) {
         <button type="button" class="btn btn-ghost" id="theme-toggle" aria-label="Toggle theme">
           ${currentTheme === "ink" ? "Paper theme" : "Ink theme"}
         </button>
-        <button type="button" class="btn btn-ghost" id="load-auth-preset" title="Reset Auth demo to Solo · 1k–10k · 14d">
+        <button type="button" class="btn btn-ghost" id="load-auth-preset" title="Reset demo to Solo · 1k–10k · 14d">
           Reset demo
         </button>
       </div>
     </header>
+  `;
+}
+
+/**
+ * Segmented preset switcher — Auth (default boot) | Scraping.
+ */
+function renderPresetSwitcher() {
+  return `
+    <div class="preset-switcher" role="group" aria-label="Demo preset">
+      <button
+        type="button"
+        class="preset-segment${currentPreset === "auth" ? " is-active" : ""}"
+        data-preset-switch="auth"
+        aria-pressed="${currentPreset === "auth"}"
+      >Auth</button>
+      <button
+        type="button"
+        class="preset-segment${currentPreset === "scraping" ? " is-active" : ""}"
+        data-preset-switch="scraping"
+        aria-pressed="${currentPreset === "scraping"}"
+      >Scraping</button>
+    </div>
   `;
 }
 
@@ -404,7 +433,8 @@ function renderToolLog(snapshot) {
   if (snapshot.toolLog.length === 0) {
     return `
       <section class="rail-panel" aria-labelledby="tool-log-heading">
-        <h2 id="tool-log-heading">Agent tool log</h2>
+        <h2 id="tool-log-heading">Tool log</h2>
+        <p class="tool-log-subtitle">Human and agent actions share one store.</p>
         <p class="rail-empty">No tool calls yet.</p>
         ${auditTrailCopy(snapshot)}
       </section>
@@ -413,7 +443,8 @@ function renderToolLog(snapshot) {
 
   return `
     <section class="rail-panel" aria-labelledby="tool-log-heading">
-      <h2 id="tool-log-heading">Agent tool log</h2>
+      <h2 id="tool-log-heading">Tool log</h2>
+      <p class="tool-log-subtitle">Human and agent actions share one store.</p>
       ${auditTrailCopy(snapshot)}
       <ul class="tool-log-list">
         ${snapshot.toolLog
@@ -422,7 +453,10 @@ function renderToolLog(snapshot) {
           .map(
             (entry) => `
               <li class="tool-log-entry">
-                <time class="tool-log-time" datetime="${escapeHtml(entry.timestamp)}">${escapeHtml(formatTimestamp(entry.timestamp))}</time>
+                <div class="tool-log-meta">
+                  <time class="tool-log-time" datetime="${escapeHtml(entry.timestamp)}">${escapeHtml(formatTimestamp(entry.timestamp))}</time>
+                  <span class="tool-log-source source-${escapeHtml(entry.source ?? "agent")}">${escapeHtml(entry.source ?? "agent")}</span>
+                </div>
                 <code class="tool-log-name">${escapeHtml(entry.tool)}</code>
                 <span class="tool-log-summary">${escapeHtml(entry.summary)}</span>
               </li>
@@ -482,15 +516,71 @@ function bindEvents(root, snapshot) {
 
   root.querySelector("#load-auth-preset")?.addEventListener("click", () => {
     try {
-      loadDefaultDemo();
+      if (currentPreset === "scraping") {
+        loadScrapingDemo();
+        appendToolLog({
+          tool: "create_decision",
+          input: { preset: "scraping", action: "reset" },
+          summary: "Human: reset Scraping demo",
+          source: "human",
+        });
+      } else {
+        loadDefaultDemo();
+        appendToolLog({
+          tool: "create_decision",
+          input: { preset: "auth", action: "reset" },
+          summary: "Human: reset Auth demo",
+          source: "human",
+        });
+      }
     } catch (error) {
       window.alert(error instanceof Error ? error.message : String(error));
     }
   });
 
+  for (const button of root.querySelectorAll("[data-preset-switch]")) {
+    button.addEventListener("click", () => {
+      const preset = button.getAttribute("data-preset-switch");
+      if (preset !== "auth" && preset !== "scraping") {
+        return;
+      }
+      if (preset === currentPreset) {
+        return;
+      }
+      try {
+        currentPreset = preset;
+        if (preset === "scraping") {
+          loadScrapingDemo();
+          appendToolLog({
+            tool: "create_decision",
+            input: { preset: "scraping", action: "switch" },
+            summary: "Human: switched to Scraping preset",
+            source: "human",
+          });
+        } else {
+          loadDefaultDemo();
+          appendToolLog({
+            tool: "create_decision",
+            input: { preset: "auth", action: "switch" },
+            summary: "Human: switched to Auth preset",
+            source: "human",
+          });
+        }
+      } catch (error) {
+        window.alert(error instanceof Error ? error.message : String(error));
+      }
+    });
+  }
+
   root.querySelector("#rerank-button")?.addEventListener("click", () => {
     try {
       rerankDecisionOptions();
+      appendToolLog({
+        tool: "rerank_decision_options",
+        input: {},
+        summary: "Human: reranked",
+        source: "human",
+      });
     } catch (error) {
       window.alert(error instanceof Error ? error.message : String(error));
     }
@@ -503,11 +593,30 @@ function bindEvents(root, snapshot) {
         if (key === "scale_band") {
           const next = cycleValue(SCALE_BANDS, snapshot.scaleBand);
           setDecisionContext({ scale_band: next });
+          appendToolLog({
+            tool: "set_decision_context",
+            input: { scale_band: next },
+            summary: `Human: scale_band → ${next}`,
+            source: "human",
+          });
         } else if (key === "compliance_tier") {
           const next = cycleValue(COMPLIANCE_TIERS, snapshot.complianceTier);
           setDecisionContext({ compliance_tier: next });
+          appendToolLog({
+            tool: "set_decision_context",
+            input: { compliance_tier: next },
+            summary: `Human: compliance_tier → ${next}`,
+            source: "human",
+          });
         } else if (key === "is_core_ip") {
-          setDecisionContext({ is_core_ip: !snapshot.isCoreIp });
+          const next = !snapshot.isCoreIp;
+          setDecisionContext({ is_core_ip: next });
+          appendToolLog({
+            tool: "set_decision_context",
+            input: { is_core_ip: next },
+            summary: `Human: is_core_ip → ${next}`,
+            source: "human",
+          });
         }
       } catch (error) {
         window.alert(error instanceof Error ? error.message : String(error));
@@ -532,7 +641,15 @@ function bindEvents(root, snapshot) {
       const criterion = target.dataset.criterion;
       const weight = Number(target.value);
       try {
-        setPriorityWeight({ criterion, weight });
+        const result = setPriorityWeight({ criterion, weight });
+        if (result.changed) {
+          appendToolLog({
+            tool: "set_priority_weight",
+            input: { criterion, weight },
+            summary: `Human: ${criterion} → ${weight.toFixed(1)}`,
+            source: "human",
+          });
+        }
       } catch (error) {
         window.alert(error instanceof Error ? error.message : String(error));
       }

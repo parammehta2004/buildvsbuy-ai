@@ -343,7 +343,7 @@ apply_human_preference_override({
 │  IP · timeline               │  (always visible)        │
 ├──────────────────────────────┤                          │
 │  4 OPTION CARDS (2×2)        │                          │
-│  Auth preset only            │                          │
+│  Auth or Scraping preset     │                          │
 │  score 1dp · rank · estimate │                          │
 ├──────────────────────────────┼──────────────────────────┤
 │  7 WEIGHT SLIDERS            │  LIABILITY LEDGER        │
@@ -357,7 +357,7 @@ Mobile: same regions stacked (header → context → cards → weights → log �
 ### 8.2 Locked region rules
 * **Brand:** `BuildVsBuy.ai` hero-level in header. No eyebrow marketing pills.
 * **Theme toggle:** Ink | Paper in header (see §8.5).
-* **Cards:** Auth flagship only — Build (JWT+PG+Redis), Buy (Clerk Pro), Adopt (Better-Auth), Hybrid (Supabase+RLS). Scraping preset later.
+* **Cards:** Auth **or** Scraping preset — switch via header segmented control or `create_decision({ preset })`. Auth: Build (JWT+PG+Redis), Buy (Clerk Pro), Adopt (Better-Auth), Hybrid (Supabase+RLS). Scraping: Build (Playwright+Lambda), Buy (Firecrawl), Adopt (Crawl4AI), Hybrid (Playwright+Bright Data).
 * **Tool log:** Always visible (WebMCP Leverage evidence on camera). Every tool `execute` appends an entry.
 * **Liability ledger + pin/gap:** Empty until `apply_human_preference_override`; then show `liabilities[]`, pin, and score gap vs math leader.
 * **Weights:** Seven sliders; mutation marks ranking stale until `rerank_decision_options` / Rerank control.
@@ -514,6 +514,7 @@ If Aug 31 runs slow: cut Scraping preset, tradeoff sparklines, Paper PNG regen �
    - **Slice D:** Act 1–3 hardening + WebMCP fallback polish
    - **Slice E:** Vercel deploy + README/MIT
    - **Slice F:** Video + Devpost package
+   - **Slice G:** Human tool log + favicon/meta + copy + Scraping preset + preset switcher (shipped Sept 2026)
 3. **After each slice:** lint/build (or Act walk) with evidence before next slice. One-fix-iteration on failures.
 4. **Models:** Plan = Grok 4.6 High / GLM; Build = Composer 2.5 (per model-routing). New chat when context fat; handoff file bridges.
 5. **Parallel only** when slices independent (rare here — A→B→C are serial).

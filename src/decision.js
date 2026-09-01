@@ -77,6 +77,7 @@
  * @property {string} tool
  * @property {unknown} input
  * @property {string} summary
+ * @property {"agent" | "human"} source
  * @property {boolean} rankingCurrent
  * @property {RankedOption[]} [ranking]
  */
@@ -191,6 +192,62 @@ const AUTH_PRESET_OPTIONS = Object.freeze([
     security_risk_score: 3,
     learning_value_score: 5,
     vendor_lockin_score: 6,
+    estimate: false,
+  }),
+]);
+
+/** @type {readonly DecisionOption[]} */
+const SCRAPING_PRESET_OPTIONS = Object.freeze([
+  Object.freeze({
+    id: "build",
+    name: "Build — Playwright + AWS Lambda worker",
+    type: /** @type {OptionType} */ ("build"),
+    prototype_time_hours: 100,
+    monthly_cash_cost: 40,
+    monthly_maintenance_hours: 6,
+    customization_score: 10,
+    security_risk_score: 8,
+    learning_value_score: 8,
+    vendor_lockin_score: 1,
+    estimate: false,
+  }),
+  Object.freeze({
+    id: "buy",
+    name: "Buy — Firecrawl Cloud API",
+    type: /** @type {OptionType} */ ("buy"),
+    prototype_time_hours: 2,
+    monthly_cash_cost: 45,
+    monthly_maintenance_hours: 0.1,
+    customization_score: 2,
+    security_risk_score: 2,
+    learning_value_score: 1,
+    vendor_lockin_score: 10,
+    estimate: false,
+  }),
+  Object.freeze({
+    id: "adopt",
+    name: "Adopt — Crawl4AI (self-hosted)",
+    type: /** @type {OptionType} */ ("open_source"),
+    prototype_time_hours: 36,
+    monthly_cash_cost: 20,
+    monthly_maintenance_hours: 4,
+    customization_score: 9,
+    security_risk_score: 7,
+    learning_value_score: 7,
+    vendor_lockin_score: 2,
+    estimate: false,
+  }),
+  Object.freeze({
+    id: "hybrid",
+    name: "Hybrid — Playwright + Bright Data proxies",
+    type: /** @type {OptionType} */ ("hybrid"),
+    prototype_time_hours: 22,
+    monthly_cash_cost: 90,
+    monthly_maintenance_hours: 2,
+    customization_score: 8,
+    security_risk_score: 3,
+    learning_value_score: 4,
+    vendor_lockin_score: 8,
     estimate: false,
   }),
 ]);
@@ -559,6 +616,7 @@ export function appendToolLog(entry) {
     tool: entry.tool,
     input: clone(entry.input),
     summary: entry.summary,
+    source: entry.source ?? "agent",
     rankingCurrent,
     ranking: ranking.map((item) => ({
       ...item,
@@ -596,7 +654,13 @@ export function createDecision(input = {}) {
     }
     options = AUTH_PRESET_OPTIONS.map((option) => ({ ...option }));
   } else if (input.preset === "scraping") {
-    throw new Error('Preset "scraping" is deferred until Auth slice ships.');
+    if (!title) {
+      title = "AI Web Scraping";
+    }
+    if (!problemStatement) {
+      problemStatement = "How should we implement reliable AI-powered web scraping at scale?";
+    }
+    options = SCRAPING_PRESET_OPTIONS.map((option) => ({ ...option }));
   }
 
   rankingCurrent = false;
@@ -612,6 +676,13 @@ export function loadAuthPreset() {
 /** Auth preset with Act 1 demo defaults: Solo org, 1k–10k scale, 14-day timeline, ranked. */
 export function loadDefaultDemo() {
   createDecision({ preset: "auth", org_context: "solo" });
+  setDecisionContext({ scale_band: "1k-10k", timeline_days: 14 });
+  return rerankDecisionOptions();
+}
+
+/** Scraping preset with demo defaults: Solo org, 1k–10k scale, 14-day timeline, ranked. */
+export function loadScrapingDemo() {
+  createDecision({ preset: "scraping", org_context: "solo" });
   setDecisionContext({ scale_band: "1k-10k", timeline_days: 14 });
   return rerankDecisionOptions();
 }

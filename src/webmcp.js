@@ -38,7 +38,7 @@ const AGENT_BRIEFING = [
   "4. After any mutation (create_decision, set_decision_context, add_option, set_priority_weight), ranking goes stale. Call rerank_decision_options once before describing the result. Skip redundant writes (e.g. setting a weight to its current value) — the engine already guards these.",
   "5. The math leader and the human's pinned choice can differ — that is the product's whole point. Report both honestly; never silently swap the winner to match the pin and never hide the score gap.",
   "6. Invented metrics for custom dilemmas must be added with estimate=true and flagged to the human as unconfirmed. Never present an estimate as a fact.",
-  "The on-screen Agent Tool Log is ground truth. A ranking claim with no new matching log entry is the tell that you lied — every winner you name must have a tool call behind it in the log. Mid-session the log is often already full; the tell is that it did not gain a new entry for the claim, not that it is empty.",
+  "The on-screen Tool Log is ground truth. A ranking claim with no new matching log entry is the tell that you lied — every winner you name must have a tool call behind it in the log. Mid-session the log is often already full; the tell is that it did not gain a new entry for the claim, not that it is empty.",
 ].join("\n");
 
 /**
@@ -79,7 +79,7 @@ function staleNote(snapshot) {
  * @param {string} [preamble]
  */
 function finish(toolName, input, summary, result, preamble) {
-  appendToolLog({ tool: toolName, input, summary });
+  appendToolLog({ tool: toolName, input, summary, source: "agent" });
   const parts = preamble
     ? [preamble, summary, staleNote(getSnapshot()), asText(result)]
     : [summary, staleNote(getSnapshot()), asText(result)];
@@ -96,7 +96,7 @@ export function buildDecisionTools() {
       name: "create_decision",
       title: "Create decision",
       description:
-        "Initialize or replace the single active decision workspace. Use preset \"auth\" for the flagship Authentication demo (4 seeded options). Use preset \"custom\" or omit preset for a blank slate — then call add_option for each candidate. Invented metrics in custom mode must set estimate=true on add_option until the human confirms. Does not compute ranking; call rerank_decision_options after options and weights are set.",
+        "Initialize or replace the single active decision workspace. Use preset \"auth\" for the Authentication demo (4 seeded options) or preset \"scraping\" for the AI Web Scraping demo (4 seeded options). Use preset \"custom\" or omit preset for a blank slate — then call add_option for each candidate. Invented metrics in custom mode must set estimate=true on add_option until the human confirms. Does not compute ranking; call rerank_decision_options after options and weights are set.",
       inputSchema: {
         type: "object",
         properties: {
@@ -115,7 +115,7 @@ export function buildDecisionTools() {
           preset: {
             type: "string",
             enum: ["auth", "scraping", "custom"],
-            description: "auth = Authentication flagship template. scraping is deferred.",
+            description: "auth = Authentication flagship template. scraping = AI Web Scraping template (4 seeded options).",
           },
         },
         additionalProperties: false,

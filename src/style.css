@@ -109,11 +109,58 @@ input {
   letter-spacing: -0.02em;
 }
 
+.preset-switcher {
+  display: inline-flex;
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--chip-bg);
+  gap: 2px;
+}
+
+.preset-segment {
+  padding: 4px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.preset-segment:hover {
+  color: var(--text);
+}
+
+.preset-segment.is-active {
+  background: var(--panel-raised);
+  color: var(--accent);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.preset-segment:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
 .decision-title {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
   color: var(--text);
+}
+
+.header-tagline {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent);
+  letter-spacing: 0.02em;
 }
 
 .problem-statement {
@@ -712,6 +759,12 @@ input {
   font-size: 11px;
 }
 
+.tool-log-subtitle {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .tool-log-list {
   list-style: none;
   margin: 0;
@@ -736,6 +789,40 @@ input {
   color: var(--muted);
   font-size: 11px;
   margin-bottom: 2px;
+}
+
+.tool-log-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.tool-log-meta .tool-log-time {
+  margin-bottom: 0;
+}
+
+.tool-log-source {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+}
+
+.tool-log-source.source-agent {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+.tool-log-source.source-human {
+  background: var(--chip-bg);
+  color: var(--muted);
+  border: 1px solid var(--line);
 }
 
 .tool-log-name {

@@ -1,8 +1,10 @@
-# BuildVsBuy.ai — Human-Agent Decision & Negotiation Canvas
+# BuildVsBuy.ai — Auth Decision Canvas Demo
 
 > *When AI makes prototypes free, the scarce resource isn't building — it's knowing what's worth owning.*
 
-An AI-native **build-vs-buy** decision environment where humans and browser-integrated agents collaboratively evaluate whether an idea should be **Built**, **Bought (SaaS)**, **Adopted (Open Source)**, or executed as a **Hybrid**. The agent actively operates, audits, simulates, and negotiates the structured decision state directly inside the web page via **WebMCP** tools — not through fragile DOM scraping or a side chat.
+An AI-native **build-vs-buy** decision environment centered on the **Authentication & Multi-Tenant Permissions** flagship scenario. Humans and browser-integrated agents collaboratively evaluate whether an idea should be **Built**, **Bought (SaaS)**, **Adopted (Open Source)**, or executed as a **Hybrid**. The agent operates, audits, simulates, and negotiates structured decision state directly inside the web page via **WebMCP** tools — not through fragile DOM scraping or a side chat.
+
+**Structured author estimates, not financial advice.** Axis numbers are plausible demo inputs for comparison, not audited forecasts.
 
 Built for the [OpenAI WebMCP Challenge](https://webmcp.devpost.com/).
 
@@ -14,16 +16,18 @@ Traditional agents browse pages by screenshot scraping and simulated clicks — 
 
 - The agent writes structured context (`set_decision_context`), adds options, sets weights, reranks, simulates stress scenarios, and even applies a human override — all through typed tool calls.
 - The human sees the same canvas update live and can steer with sliders / toggles that call the **same store APIs**.
-- Every tool execution streams into an on-screen **Agent Tool Log** — visible proof of WebMCP leverage.
+- Every tool execution streams into an on-screen **Tool log** — human clicks and agent calls share one store, visible proof of WebMCP leverage.
 
 ## The 4 options
 
-| Type | Flagship product (Auth preset) |
-|---|---|
-| **BUILD** | Custom JWT + PostgreSQL + Redis session store |
-| **BUY** | Clerk Pro |
-| **ADOPT** | Better-Auth |
-| **HYBRID** | Supabase Auth + Postgres RLS |
+| Type | Auth preset | Scraping preset |
+|---|---|---|
+| **BUILD** | Custom JWT + PostgreSQL + Redis session store | Playwright + AWS Lambda worker |
+| **BUY** | Clerk Pro | Firecrawl Cloud API |
+| **ADOPT** | Better-Auth | Crawl4AI (self-hosted) |
+| **HYBRID** | Supabase Auth + Postgres RLS | Playwright + Bright Data proxies |
+
+Use the header **Auth | Scraping** switcher (or `create_decision({ preset: "scraping" })` via WebMCP) to load the scraping scenario. Boot defaults to Auth for the demo video script.
 
 ## Seven scoring axes (no double-count)
 
@@ -53,7 +57,7 @@ All registered imperatively via `document.modelContext.registerTool`:
 8. `solve_winning_conditions` — sensitivity: what must change for a target to win
 9. `apply_human_preference_override` — pin + score gap + Liability Ledger for honest human override
 
-Every `execute` appends to the Agent Tool Execution Log.
+Every `execute` appends to the Tool log (agent path). Human slider, context-chip, rerank, and reset actions append with `source: human` too.
 
 ## Run
 
@@ -89,7 +93,7 @@ node scripts/smoke-webmcp.mjs     # Slice B: all 9 tools, Act 1–3 flow
 1. `src/main.js` installs the WebMCP polyfill only when native `document.modelContext` is missing.
 2. `src/webmcp.js` registers the 9 tools; each `execute` calls the matching `src/decision.js` store API and appends to the tool log.
 3. `src/decision.js` is the single source of truth: context, options, weights, normalize+score, skill modifiers, simulate/solve, override + liabilities, `notify`/`subscribe`.
-4. `src/ui.js` subscribes and full-redraws from `getSnapshot()`; human controls (sliders, toggles, Load Auth preset, Rerank, theme toggle) call the same store APIs as the agent.
+4. `src/ui.js` subscribes and full-redraws from `getSnapshot()`; human controls (sliders, toggles, preset switcher, Reset demo, Rerank, theme toggle) call the same store APIs as the agent.
 5. **No backend.** Browser-only Vite + vanilla JS. In-memory state (persistence deferred for v1).
 
 ### Discover the registered tools from the page console

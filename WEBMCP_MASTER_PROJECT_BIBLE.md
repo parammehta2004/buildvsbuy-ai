@@ -192,7 +192,7 @@ Every decision evaluated by the engine falls across four primary vectors:
    * Invented metrics must set `estimate: true` until human confirms (prevents hallucinated TCO looking official).
 4. **Honest 3-act demo arc (replaces fake “Clerk wins at 10× from 1k”):**
    * Act 1 (two beats): (a) Neutral default weights → `Adopt > Hybrid > Build > Buy`; Build≈Buy tied at the bottom (sober default, no reflex wins). (b) Agent biases toward prototype speed (`set_priority_weight(time_to_prototype, 9)` + `rerank`) → `Adopt > Hybrid > Buy > Build`; **Build drops to last** because over-weighting speed punishes the slowest option. This *is* the vibe-coding trap on camera: prototype speed is no longer the bottleneck, and over-weighting it makes you abandon Build for the wrong reasons. Crossover is `w_ttp > 8.5` (algebraic, verified in smoke harness).
-   * Act 2: Stress via `soc2` compliance and/or scale into `50k+` MRU (Clerk free band is 50k MRU — small 10× often no-ops).
+   * Act 2: Stress via `simulate_future_scenario` with `soc2` compliance and/or scale into `50k+`. The tool *projects* a stressed ranking (returned in the payload, shown as a UI banner) — it does **not** reorder baseline cards or scores. On the Auth preset the projected leader often stays Adopt; the teaching point is which axes move under stress, not a winner swap. Rerank only repaints the canvas when weights change.
    * Act 3: Core-IP override → pin Build + show score gap + Liability Ledger.
 
 ---
@@ -241,7 +241,7 @@ $$S_k = \frac{\sum_{c \in C} w_c \cdot \text{NormScore}(k, c)}{\sum_{c \in C} w_
 Display scores to **1 decimal**. Tool copy: estimates, not accounting.
 
 ### 6.5 Simulation, Invariants, Override
-* **Primary stress:** `compliance_tier → soc2` and/or `scale_band → 50k+` (Clerk overage / Business features). Avoid demo relying on 10× from 1k MRU alone.
+* **Primary stress:** `compliance_tier → soc2` and/or `scale_band → 50k+` (vendor overage / Business features). `simulate_future_scenario` *projects* a stressed ranking without mutating baseline cards; avoid demo relying on 10× from 1k MRU alone.
 * **Also supported:** budget contraction, timeline crunch.
 * **"Yes, Build It" invariants** (surfaced in tool text): domain uniqueness; `is_core_ip`; parasitic SaaS scale; sovereignty/on-prem.
 * **Override:** `apply_human_preference_override` supports **pin + score gap + Liability Ledger** (`liabilities[]`) so Act 3 is honest on camera.

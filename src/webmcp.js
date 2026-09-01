@@ -322,7 +322,7 @@ export function buildDecisionTools() {
       name: "simulate_future_scenario",
       title: "Simulate future scenario",
       description:
-        "Stress-test ranking under a future scenario without mutating baseline options. Prefer compliance_tier soc2/hipaa and scale_band 50k+ for Act 2 (Clerk MRU overage, compliance burden). Also supports timeline crunch. Returns projected_ranking alongside preserved baseline_ranking.",
+        "Stress-test ranking under a future scenario without mutating baseline options or canvas cards. Prefer compliance_tier soc2/hipaa and scale_band 50k+ for Act 2 (vendor overage, compliance burden). Also supports timeline crunch. Returns projected_ranking alongside preserved baseline_ranking; the UI shows the projection as a banner but baseline cards and scores are unchanged until you rerank with new weights.",
       inputSchema: {
         type: "object",
         properties: {

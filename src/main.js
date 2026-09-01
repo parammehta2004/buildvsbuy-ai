@@ -1,5 +1,5 @@
-import { loadDefaultDemo } from "./decision.js";
-import { bindApp } from "./ui.js";
+import { loadDefaultDemo, loadScrapingDemo } from "./decision.js";
+import { bindApp, setCurrentPreset } from "./ui.js";
 import { installDocumentModelContext } from "./polyfill.js";
 import { getRegisteredTools, registerDecisionTools } from "./webmcp.js";
 import "./style.css";
@@ -34,7 +34,18 @@ async function boot() {
     }
   }
 
-  loadDefaultDemo();
+  // Agent-first boot: default to an empty canvas so the agent (or a human
+  // clicking a preset segment / Reset demo) creates the workspace on camera.
+  // ?preset=auth or ?preset=scraping preloads a demo for non-video browsing.
+  const params = new URLSearchParams(window.location.search);
+  const bootPreset = params.get("preset");
+  if (bootPreset === "scraping") {
+    setCurrentPreset("scraping");
+    loadScrapingDemo();
+  } else if (bootPreset === "auth") {
+    loadDefaultDemo();
+  }
+
   bindApp(root, () => webmcp);
 }
 

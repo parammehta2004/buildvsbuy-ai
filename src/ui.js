@@ -72,12 +72,13 @@ export function renderApp(root, webmcp) {
     <div class="app">
       ${renderHeader(snapshot, webmcp)}
       <div class="main-grid">
-        <div class="main-column">
-          ${renderContextStrip(snapshot)}
-          ${snapshot.override.active ? renderOverrideBanner(snapshot) : ""}
-          ${renderCardsSection(snapshot)}
-          ${renderWeightsSection(snapshot)}
-        </div>
+      <div class="main-column">
+        ${renderContextStrip(snapshot)}
+        ${renderSimulationBanner(snapshot)}
+        ${snapshot.override.active ? renderOverrideBanner(snapshot) : ""}
+        ${renderCardsSection(snapshot)}
+        ${renderWeightsSection(snapshot)}
+      </div>
         <aside class="right-rail">
           ${renderToolLog(snapshot)}
           ${renderLedger(snapshot)}
@@ -114,7 +115,7 @@ function renderHeader(snapshot, webmcp) {
         <button type="button" class="btn btn-ghost" id="theme-toggle" aria-label="Toggle theme">
           ${currentTheme === "ink" ? "Paper theme" : "Ink theme"}
         </button>
-        <button type="button" class="btn btn-ghost" id="load-auth-preset" title="Reset demo to Solo · 1k–10k · 14d">
+        <button type="button" class="btn btn-ghost" id="load-auth-preset" title="Reset ${currentPreset === "scraping" ? "Scraping" : "Auth"} demo to Solo · 1k–10k · 14d">
           Reset demo
         </button>
       </div>
@@ -269,7 +270,9 @@ function renderCardsSection(snapshot) {
   }
 
   const rankedById = new Map(snapshot.ranking.map((item) => [item.id, item]));
-  const orderedOptions = snapshot.rankingCurrent
+  // Keep cards in last-known rank order when stale — only rank/score go to "—".
+  // Falls back to seed order only before the first rerank (no ranking yet).
+  const orderedOptions = snapshot.ranking.length > 0
     ? [...snapshot.ranking]
         .sort((a, b) => a.rank - b.rank)
         .map((ranked) => snapshot.options.find((o) => o.id === ranked.id))
@@ -344,6 +347,10 @@ function renderOptionCard(option, snapshot, ranked) {
         <div class="metric-row">
           <dt>Monthly maintenance</dt>
           <dd>${escapeHtml(formatMaintenance(metrics.monthly_maintenance_hours ?? option.monthly_maintenance_hours))}</dd>
+        </div>
+        <div class="metric-row metric-row-secondary">
+          <dt>Labor est. (display only)</dt>
+          <dd>${escapeHtml(formatMoney(metrics.labor_estimate_display ?? (option.prototype_time_hours + option.monthly_maintenance_hours * 60) * 75))}</dd>
         </div>
       </dl>
     </article>
@@ -464,6 +471,26 @@ function renderToolLog(snapshot) {
           )
           .join("")}
       </ul>
+    </section>
+  `;
+}
+
+/**
+ * Act 2 visibility: render the last simulate_future_scenario projection as a slim banner.
+ * Does not mutate the baseline ranking — projection is display-only.
+ * @param {ReturnType<typeof getSnapshot>} snapshot
+ */
+function renderSimulationBanner(snapshot) {
+  if (!snapshot.lastSimulation) {
+    return "";
+  }
+  const sim = snapshot.lastSimulation;
+  const leader = sim.leader ? `${escapeHtml(sim.leader.name)} · ${escapeHtml(String(sim.leader.displayScore.toFixed(1)))}` : "—";
+  return `
+    <section class="sim-banner" aria-live="polite">
+      <p class="sim-banner-title">Projected stress: <strong>${escapeHtml(sim.scenario_name)}</strong></p>
+      <p class="sim-banner-leader">Projected leader: ${leader}</p>
+      <p class="sim-banner-note">Projection only — baseline cards and scores are unchanged. Rerank does not apply stress; use simulate_future_scenario.</p>
     </section>
   `;
 }
@@ -666,6 +693,17 @@ export function bindApp(root, getWebmcp) {
   const redraw = () => renderApp(root, getWebmcp());
   subscribe(redraw);
   redraw();
+}
+
+/**
+ * Set the active preset tracker from outside the module (e.g. boot via ?preset=scraping).
+ * Does not load the preset — caller must invoke the matching loader.
+ * @param {"auth" | "scraping"} next
+ */
+export function setCurrentPreset(next) {
+  if (next === "auth" || next === "scraping") {
+    currentPreset = next;
+  }
 }
 
 /**

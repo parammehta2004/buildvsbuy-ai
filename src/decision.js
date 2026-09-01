@@ -300,6 +300,12 @@ let liabilities = [];
 /** @type {ToolLogEntry[]} */
 let toolLog = [];
 
+/** @type {"" | "auth" | "scraping" | "custom"} */
+let preset = "";
+
+/** @type {{ scenario_name: string, leader: { id: string, name: string, displayScore: number } | null, stress_applied: string[], projected_ranking: Array<{ id: string, name: string, displayScore: number, rank: number }> } | null} */
+let lastSimulation = null;
+
 function notify() {
   for (const listener of listeners) {
     listener();
@@ -565,6 +571,8 @@ export function reset() {
   override = { active: false };
   liabilities = [];
   toolLog = [];
+  preset = "";
+  lastSimulation = null;
 }
 
 export function getSnapshot() {
@@ -588,6 +596,15 @@ export function getSnapshot() {
     override: { ...override },
     liabilities: liabilities.map((item) => ({ ...item })),
     toolLog: toolLog.map((entry) => ({ ...entry })),
+    preset,
+    lastSimulation: lastSimulation
+      ? {
+          scenario_name: lastSimulation.scenario_name,
+          leader: lastSimulation.leader ? { ...lastSimulation.leader } : null,
+          stress_applied: [...lastSimulation.stress_applied],
+          projected_ranking: lastSimulation.projected_ranking.map((item) => ({ ...item })),
+        }
+      : null,
   });
 }
 
@@ -644,6 +661,11 @@ export function createDecision(input = {}) {
   problemStatement = String(input.problem_statement ?? "").trim();
   orgContext = /** @type {OrgContext} */ (assertEnum(input.org_context ?? "startup", ["solo", "startup", "enterprise"], "org_context"));
   skillLevel = /** @type {SkillLevel} */ (assertEnum(input.skill_level ?? "vibe", ["vibe", "mid", "senior"], "skill_level"));
+  preset = /** @type {"" | "auth" | "scraping" | "custom"} */ (
+    input.preset === "auth" || input.preset === "scraping" || input.preset === "custom"
+      ? input.preset
+      : ""
+  );
 
   if (input.preset === "auth") {
     if (!title) {
@@ -862,11 +884,11 @@ function projectOption(option, stress) {
   if (stress.scale_band === "50k+") {
     if (projected.type === "buy") {
       projected.monthly_cash_cost += 75;
-      applied.push(`Clerk Business / MRU overage pushes ${projected.id} monthly cash higher at 50k+ scale.`);
+      applied.push(`Vendor usage-tier overage pushes ${projected.id} monthly cash higher at 50k+ scale.`);
     }
     if (projected.type === "hybrid") {
       projected.monthly_cash_cost += 20;
-      applied.push(`Supabase scale tier increases ${projected.id} monthly cash at 50k+.`);
+      applied.push(`Managed-core scale tier increases ${projected.id} monthly cash at 50k+.`);
     }
     if (projected.type === "build") {
       projected.monthly_maintenance_hours += 0.5;
@@ -935,6 +957,19 @@ export function simulateFutureScenario(input) {
     .sort((left, right) => right.score - left.score || left.id.localeCompare(right.id))
     .map((item, index) => ({ ...item, rank: index + 1 }));
 
+  lastSimulation = {
+    scenario_name: input.scenario_name.trim(),
+    leader: projectedRanking[0] ?? null,
+    stress_applied: [...new Set(stressNotes)],
+    projected_ranking: projectedRanking.map((item) => ({
+      id: item.id,
+      name: item.name,
+      displayScore: item.displayScore,
+      rank: item.rank,
+    })),
+  };
+  notify();
+
   return {
     scenario_name: input.scenario_name.trim(),
     stress,
@@ -975,8 +1010,8 @@ export function solveWinningConditions(input) {
   if (target.type === "build") {
     levers.push("Set is_core_ip=true and pin Build in Act 3 to justify strategic override.");
     levers.push("Raise strategic_learning weight above 6 to reward moat-building.");
-    levers.push("Raise customization weight above 8 when bespoke tenant logic is non-negotiable.");
-    levers.push("If compliance is mandatory, custom control can beat thin SaaS wrappers — but liabilities rise.");
+    levers.push("Raise customization weight above 8 when bespoke control is non-negotiable.");
+    levers.push("If compliance is mandatory, custom control can beat thin vendor wrappers — but liabilities rise.");
   }
   if (target.type === "buy") {
     levers.push("Keep time_to_prototype weight high while team skill_level stays vibe.");
@@ -984,14 +1019,14 @@ export function solveWinningConditions(input) {
     levers.push("Move scale_band to 50k+ only if vendor overage is still cheaper than build maintenance.");
   }
   if (target.type === "open_source") {
-    levers.push("Lower cash_tco weight when Better-Auth monthly hosting stays lean.");
-    levers.push("Raise customization weight when in-app TS control beats Clerk constraints.");
+    levers.push("Lower cash_tco weight when self-host monthly hosting stays lean.");
+    levers.push("Raise customization weight when in-app control beats vendor constraints.");
     levers.push("Avoid treating Adopt like heavy self-host — vibe penalties should not apply.");
   }
   if (target.type === "hybrid") {
-    levers.push("Balance customization and security_risk weights for Supabase RLS control.");
-    levers.push("Use soc2 stress to reward managed auth core with custom middleware.");
-    levers.push("Reduce vendor_lockin weight if exit path via Postgres remains acceptable.");
+    levers.push("Balance customization and security_risk weights for managed-core + custom-middleware control.");
+    levers.push("Use soc2 stress to reward managed core with custom middleware on top.");
+    levers.push("Reduce vendor_lockin weight if exit path via open standards remains acceptable.");
   }
 
   levers.push(`Close the ${scoreGap.toFixed(2)} score gap vs leader "${leader.name}" (${leader.id}).`);
@@ -1009,7 +1044,7 @@ export function solveWinningConditions(input) {
     levers,
     suggested_context_shifts: [
       complianceTier !== "soc2" ? "Try compliance_tier=soc2 to stress vendor vs custom security." : null,
-      scaleBand !== "50k+" ? "Try scale_band=50k+ to surface Clerk overage pressure." : null,
+      scaleBand !== "50k+" ? "Try scale_band=50k+ to surface vendor overage pressure." : null,
       !isCoreIp && target.type === "build" ? "Set is_core_ip=true for Act 3 pin narrative." : null,
     ].filter(Boolean),
   };
@@ -1017,9 +1052,65 @@ export function solveWinningConditions(input) {
 
 /**
  * @param {DecisionOption} option
+ * @param {"" | "auth" | "scraping" | "custom"} activePreset
  * @returns {LiabilityEntry[]}
  */
-function buildLiabilitiesForOption(option) {
+function buildLiabilitiesForOption(option, activePreset) {
+  if (activePreset === "scraping") {
+    if (option.type === "build") {
+      return [
+        {
+          id: "scrape-selector-rot",
+          title: "Selector & layout rot",
+          description: "Site DOM changes break Playwright selectors; ongoing scraper maintenance is your on-call problem.",
+          severity: "high",
+        },
+        {
+          id: "scrape-captcha-arms",
+          title: "Anti-bot arms race",
+          description: "CAPTCHAs, fingerprinting, and headless detection force constant worker rework.",
+          severity: "high",
+        },
+        {
+          id: "scrape-infra-ops",
+          title: "Lambda worker operations",
+          description: "Concurrency limits, retries, and proxy health become production liabilities.",
+          severity: "medium",
+        },
+        {
+          id: "scrape-legal",
+          title: "Legal / ToS exposure",
+          description: "Scraping scale and ToS boundaries shift legal risk onto your team.",
+          severity: "medium",
+        },
+      ];
+    }
+    if (option.type === "buy") {
+      return [
+        {
+          id: "vendor-lock",
+          title: "Vendor coupling",
+          description: "Scraping UX and output schema become tightly coupled to Firecrawl APIs.",
+          severity: "medium",
+        },
+        {
+          id: "api-unit-economics",
+          title: "API unit economics",
+          description: "Per-page/per-token pricing spikes at scale with no architectural escape hatch.",
+          severity: "high",
+        },
+      ];
+    }
+    return [
+      {
+        id: "maintenance",
+        title: "Ongoing maintenance",
+        description: `${option.name} still needs active ownership as selectors, proxies, and schemas evolve.`,
+        severity: "medium",
+      },
+    ];
+  }
+
   if (option.type === "build") {
     return [
       {
@@ -1118,7 +1209,7 @@ export function applyHumanPreferenceOverride(input) {
       : Math.round((mathLeader.score - pinnedRanked.score) * 10) / 10;
 
   const pinnedOption = findOption(pinnedOptionId);
-  liabilities = buildLiabilitiesForOption(pinnedOption).slice(0, 5);
+  liabilities = buildLiabilitiesForOption(pinnedOption, preset).slice(0, 5);
 
   override = {
     active: true,

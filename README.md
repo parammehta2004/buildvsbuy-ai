@@ -85,7 +85,7 @@ node scripts/smoke-webmcp.mjs     # Slice B: all 9 tools, Act 1–3 flow
 ## Demo arc (honest 3-act)
 
 1. **Act 1 — vibe trap:** neutral weights rank `Adopt > Hybrid > Build > Buy`; biasing Time-to-Prototype weight high drops Build to last — the prototype-speed trap.
-2. **Act 2 — stress:** `soc2` compliance and/or `50k+` monthly retained users change CashTCO and Security risk; ownership liability shows up on the canvas.
+2. **Act 2 — stress:** `simulate_future_scenario` with `soc2` compliance and/or `50k+` scale *projects* a stressed ranking (returned in the tool payload and shown as a banner) — it does **not** reorder the baseline cards. On the Auth preset the projected leader often stays Adopt; the lesson is which axes move, not a winner swap. Rerank only changes the canvas when weights change.
 3. **Act 3 — negotiate:** human asserts core IP → `apply_human_preference_override` pins Build, shows the score gap vs the math leader, and logs a structured Liability Ledger. *Yes, build it — with eyes open.*
 
 ## How it works

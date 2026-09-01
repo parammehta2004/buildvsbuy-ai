@@ -931,6 +931,159 @@ input {
   line-height: 1.4;
 }
 
+details.tool-log-entry summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+details.tool-log-entry summary::-webkit-details-marker {
+  display: none;
+}
+
+.tool-log-summary-row {
+  display: block;
+}
+
+.tool-log-detail {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.tool-log-detail-label {
+  margin: 0 0 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.tool-log-detail pre {
+  margin: 0 0 8px;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-family: ui-monospace, "Cascadia Code", monospace;
+  overflow-x: auto;
+  max-height: 120px;
+  border-radius: 4px;
+  background: var(--chip-bg);
+  color: var(--text);
+}
+
+.tool-log-ranking-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tool-log-ranking-badge.is-current {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+.tool-log-ranking-badge.is-stale {
+  background: var(--chip-bg);
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+
+.tool-log-ranking-list {
+  margin: 0;
+  padding: 0 0 0 16px;
+  font-size: 11px;
+  font-family: ui-monospace, "Cascadia Code", monospace;
+  color: var(--text);
+}
+
+.tool-log-ranking-list li {
+  margin-bottom: 2px;
+}
+
+.tool-log-ranking-more {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.insight-rail {
+  border-left: 3px solid var(--accent);
+}
+
+.insight-rail-summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  list-style: none;
+}
+
+.insight-rail summary::-webkit-details-marker {
+  display: none;
+}
+
+.insight-tool {
+  margin: 6px 0 4px;
+  font-size: 11px;
+}
+
+.insight-headline {
+  margin: 0 0 4px;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.insight-line {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.insight-note {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.insight-list {
+  margin: 0;
+  padding: 0 0 0 16px;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.insight-shifts {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+@keyframes region-pulse {
+  0%,
+  100% {
+    box-shadow: none;
+  }
+
+  50% {
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+}
+
+.is-pulsed {
+  animation: region-pulse 2s ease-out;
+  border-radius: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .is-pulsed {
+    box-shadow: 0 0 0 2px var(--accent);
+    animation: none;
+  }
+}
+
 .ledger-list {
   list-style: none;
   margin: 0;

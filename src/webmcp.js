@@ -3,6 +3,7 @@ import {
   CRITERION_LABELS,
   OPTION_TYPES,
   appendToolLog,
+  setLastInsight,
   addOption,
   applyHumanPreferenceOverride,
   compareDecisionOptions,
@@ -78,7 +79,16 @@ function staleNote(snapshot) {
  * @param {unknown} result
  * @param {string} [preamble]
  */
+const INSIGHT_TOOLS = new Set([
+  "compare_decision_options",
+  "solve_winning_conditions",
+  "simulate_future_scenario",
+]);
+
 function finish(toolName, input, summary, result, preamble) {
+  if (INSIGHT_TOOLS.has(toolName)) {
+    setLastInsight({ tool: toolName, summary, payload: result });
+  }
   appendToolLog({ tool: toolName, input, summary, source: "agent" });
   const parts = preamble
     ? [preamble, summary, staleNote(getSnapshot()), asText(result)]

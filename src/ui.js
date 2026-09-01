@@ -39,6 +39,24 @@ let currentTheme = "ink";
 /** @type {"auth" | "scraping" | null} */
 let currentPreset = null;
 
+/** @type {string | null} */
+let expandedLogTimestamp = null;
+
+/** @type {{ regionId: string, source: string, at: number } | null} */
+let activePulse = null;
+
+/** @type {ReturnType<typeof setTimeout> | null} */
+let pulseTimer = null;
+
+/** @type {number} */
+let lastLogLen = 0;
+
+/** @type {HTMLElement | null} */
+let appRoot = null;
+
+/** @type {(() => { source: "native" | "polyfill" | "unavailable", error: string | null, tools: Array<{ name: string, description?: string }> }) | null} */
+let appGetWebmcp = null;
+
 /** @type {number | null} */
 let themeTransitionTimer = null;
 
@@ -66,6 +84,7 @@ function applyTheme(theme) {
  */
 export function renderApp(root, webmcp) {
   const snapshot = getSnapshot();
+  const focusState = captureFocusState(root);
   document.documentElement.dataset.theme = currentTheme;
 
   // Sync preset tracker from store (agent create_decision) or clear when empty.
@@ -75,19 +94,22 @@ export function renderApp(root, webmcp) {
     currentPreset = null;
   }
 
+  const pulseClass = (regionId) => (activePulse?.regionId === regionId ? " is-pulsed" : "");
+
   root.innerHTML = `
     <div class="app">
-      ${renderHeader(snapshot, webmcp)}
+      ${renderHeader(snapshot, webmcp, pulseClass)}
       <div class="main-grid">
       <div class="main-column">
-        ${renderContextStrip(snapshot)}
+        ${renderContextStrip(snapshot, pulseClass)}
         ${renderSimulationBanner(snapshot)}
         ${snapshot.override.active ? renderOverrideBanner(snapshot) : ""}
-        ${renderCardsSection(snapshot)}
-        ${renderWeightsSection(snapshot)}
+        ${renderCardsSection(snapshot, pulseClass)}
+        ${renderWeightsSection(snapshot, pulseClass)}
       </div>
         <aside class="right-rail">
           ${renderToolLog(snapshot)}
+          ${renderAgentInsight(snapshot)}
           ${renderLedger(snapshot)}
         </aside>
       </div>
@@ -95,13 +117,14 @@ export function renderApp(root, webmcp) {
   `;
 
   bindEvents(root, snapshot);
+  restoreFocusState(root, focusState);
 }
 
 /**
  * @param {ReturnType<typeof getSnapshot>} snapshot
  * @param {{ source: "native" | "polyfill" | "unavailable", error: string | null, tools: Array<{ name: string, description?: string }> }} webmcp
  */
-function renderHeader(snapshot, webmcp) {
+function renderHeader(snapshot, webmcp, pulseClass) {
   const hasDecision = snapshot.options.length > 0;
   const title = hasDecision ? snapshot.title : "BuildVsBuy.ai";
   const problem = hasDecision
@@ -115,7 +138,7 @@ function renderHeader(snapshot, webmcp) {
     <header class="header">
       <div class="header-brand">
         <p class="brand">BuildVsBuy.ai</p>
-        ${renderPresetSwitcher(hasDecision)}
+        ${renderPresetSwitcher(hasDecision, pulseClass)}
         ${hasDecision ? `<h1 class="decision-title">${escapeHtml(title)}</h1>` : ""}
         ${hasDecision ? `<p class="header-tagline">Demo scenario — structured estimates</p>` : ""}
         <p class="problem-statement">${escapeHtml(problem)}</p>
@@ -143,9 +166,9 @@ function renderHeader(snapshot, webmcp) {
  * Segmented preset switcher — Auth | Scraping. Neither highlighted until a preset loads.
  * @param {boolean} hasDecision
  */
-function renderPresetSwitcher(hasDecision) {
+function renderPresetSwitcher(hasDecision, pulseClass) {
   return `
-    <div class="preset-switcher" role="group" aria-label="Demo preset">
+    <div class="preset-switcher${pulseClass("preset-switcher")}" id="preset-switcher" role="group" aria-label="Demo preset">
       <button
         type="button"
         class="preset-segment${hasDecision && currentPreset === "auth" ? " is-active" : ""}"
@@ -200,14 +223,14 @@ function renderWebmcpChip(webmcp) {
 /**
  * @param {ReturnType<typeof getSnapshot>} snapshot
  */
-function renderContextStrip(snapshot) {
+function renderContextStrip(snapshot, pulseClass) {
   const orgLabel = formatOrgContext(snapshot.orgContext);
   const skillLabel = formatSkillLevel(snapshot.skillLevel);
   const timelineLabel =
     snapshot.timelineDays != null ? `Timeline ${snapshot.timelineDays}d` : "Timeline —";
 
   return `
-    <div class="context-strip" role="group" aria-label="Decision context">
+    <div class="context-strip${pulseClass("context-strip")}" id="context-strip" role="group" aria-label="Decision context">
       <span class="context-chip is-display">${escapeHtml(orgLabel)}</span>
       <span class="context-chip is-display">${escapeHtml(skillLabel)}</span>
       <button
@@ -275,10 +298,10 @@ function renderOverrideBanner(snapshot) {
 /**
  * @param {ReturnType<typeof getSnapshot>} snapshot
  */
-function renderCardsSection(snapshot) {
+function renderCardsSection(snapshot, pulseClass) {
   if (snapshot.options.length === 0) {
     return `
-      <section class="cards-section" aria-label="Decision options">
+      <section class="cards-section" id="cards-section" aria-label="Decision options">
         <div class="cards-grid cards-empty-state">
           <p class="cards-empty">Waiting for decision…</p>
           <p class="cards-empty-hint">Agent: call <code>create_decision</code> with preset <code>auth</code> or <code>scraping</code>. Human: pick a preset above.</p>
@@ -298,7 +321,7 @@ function renderCardsSection(snapshot) {
     : snapshot.options;
 
   return `
-    <section class="cards-section" aria-label="Decision options">
+    <section class="cards-section${pulseClass("cards-section")}" id="cards-section" aria-label="Decision options">
       <div class="cards-grid">
         ${orderedOptions.map((option) => renderOptionCard(option, snapshot, rankedById.get(option.id))).join("")}
       </div>
@@ -389,11 +412,11 @@ function deriveMetrics(option) {
 /**
  * @param {ReturnType<typeof getSnapshot>} snapshot
  */
-function renderWeightsSection(snapshot) {
+function renderWeightsSection(snapshot, pulseClass) {
   const stale = snapshot.options.length > 0 && !snapshot.rankingCurrent;
 
   return `
-    <section class="weights-section" aria-labelledby="weights-heading">
+    <section class="weights-section${pulseClass("weights-section")}" id="weights-section" aria-labelledby="weights-heading">
       <div class="weights-header">
         <h2 id="weights-heading">Priority weights</h2>
         <div class="weights-actions">
@@ -477,19 +500,116 @@ function renderToolLog(snapshot) {
           .reverse()
           .map(
             (entry) => `
-              <li class="tool-log-entry">
-                <div class="tool-log-meta">
-                  <time class="tool-log-time" datetime="${escapeHtml(entry.timestamp)}">${escapeHtml(formatTimestamp(entry.timestamp))}</time>
-                  <span class="tool-log-source source-${escapeHtml(entry.source ?? "agent")}">${escapeHtml(entry.source ?? "agent")}</span>
-                </div>
-                <code class="tool-log-name">${escapeHtml(entry.tool)}</code>
-                <span class="tool-log-summary">${escapeHtml(entry.summary)}</span>
+              <li>
+                <details class="tool-log-entry" data-log-timestamp="${escapeHtml(entry.timestamp)}"${entry.timestamp === expandedLogTimestamp ? " open" : ""}>
+                  <summary class="tool-log-summary-row">
+                    <div class="tool-log-meta">
+                      <time class="tool-log-time" datetime="${escapeHtml(entry.timestamp)}">${escapeHtml(formatTimestamp(entry.timestamp))}</time>
+                      <span class="tool-log-source source-${escapeHtml(entry.source ?? "agent")}">${escapeHtml(entry.source ?? "agent")}</span>
+                    </div>
+                    <code class="tool-log-name">${escapeHtml(entry.tool)}</code>
+                    <span class="tool-log-summary">${escapeHtml(entry.summary)}</span>
+                  </summary>
+                  <div class="tool-log-detail">
+                    <p class="tool-log-detail-label">Input</p>
+                    <pre>${escapeHtml(JSON.stringify(entry.input, null, 2))}</pre>
+                    ${formatLogRanking(entry)}
+                  </div>
+                </details>
               </li>
             `,
           )
           .join("")}
       </ul>
     </section>
+  `;
+}
+
+/**
+ * @param {import("./decision.js").ToolLogEntry} entry
+ */
+function formatLogRanking(entry) {
+  if (!entry.ranking?.length) {
+    return "";
+  }
+  const top = entry.ranking.slice(0, 4);
+  const more = entry.ranking.length > 4 ? `<li class="tool-log-ranking-more">… +${entry.ranking.length - 4} more</li>` : "";
+  const badgeClass = entry.rankingCurrent ? "is-current" : "is-stale";
+  const badgeLabel = entry.rankingCurrent ? "current" : "stale";
+  return `
+    <p class="tool-log-detail-label">
+      Ranking snapshot
+      <span class="tool-log-ranking-badge ${badgeClass}">${badgeLabel}</span>
+    </p>
+    <ul class="tool-log-ranking-list">
+      ${top
+        .map(
+          (item) =>
+            `<li><code>${escapeHtml(item.id)}</code> #${item.rank} @${escapeHtml(String(item.displayScore))}</li>`,
+        )
+        .join("")}
+      ${more}
+    </ul>
+  `;
+}
+
+/**
+ * @param {ReturnType<typeof getSnapshot>} snapshot
+ */
+function renderAgentInsight(snapshot) {
+  if (!snapshot.lastInsight) {
+    return "";
+  }
+
+  const { tool, summary, payload } = snapshot.lastInsight;
+  let body = "";
+
+  if (tool === "compare_decision_options" && payload && typeof payload === "object") {
+    const result = /** @type {ReturnType<import("./decision.js").compareDecisionOptions>} */ (payload);
+    const winnerLine =
+      result.winner === "tie"
+        ? "Overall: tie"
+        : `Overall winner: ${result.winner} (${result.first.displayScore} vs ${result.second.displayScore})`;
+    const tradeoffs = CRITERION_KEYS.filter((key) => result.tradeoffs[key]?.winner !== "tie")
+      .slice(0, 3)
+      .map((key) => {
+        const t = result.tradeoffs[key];
+        return `${t.label}: ${t.winner} leads`;
+      });
+    body = `
+      <p class="insight-headline">${escapeHtml(result.first.id)} vs ${escapeHtml(result.second.id)}</p>
+      <p class="insight-line">${escapeHtml(winnerLine)}</p>
+      ${tradeoffs.length ? `<ul class="insight-list">${tradeoffs.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>` : ""}
+    `;
+  } else if (tool === "solve_winning_conditions" && payload && typeof payload === "object") {
+    const result = /** @type {ReturnType<import("./decision.js").solveWinningConditions>} */ (payload);
+    const levers = (result.levers ?? []).slice(0, 4);
+    const shifts = (result.suggested_context_shifts ?? []).slice(0, 2);
+    body = `
+      <p class="insight-headline">Gap: ${escapeHtml(String(result.score_gap ?? 0))} pts vs ${escapeHtml(result.leader_name ?? "leader")}</p>
+      <ul class="insight-list">${levers.map((lever) => `<li>${escapeHtml(lever)}</li>`).join("")}</ul>
+      ${shifts.length ? `<p class="insight-shifts">${shifts.map((s) => escapeHtml(String(s))).join(" · ")}</p>` : ""}
+    `;
+  } else if (tool === "simulate_future_scenario" && payload && typeof payload === "object") {
+    const result = /** @type {ReturnType<import("./decision.js").simulateFutureScenario>} */ (payload);
+    const leader = result.leader
+      ? `${result.leader.name} · ${result.leader.displayScore}`
+      : "—";
+    body = `
+      <p class="insight-headline">${escapeHtml(result.scenario_name)}</p>
+      <p class="insight-line">Projected leader: ${escapeHtml(leader)}</p>
+      <p class="insight-note">Baseline unchanged — see banner for full projection.</p>
+    `;
+  } else {
+    body = `<p class="insight-line">${escapeHtml(summary)}</p>`;
+  }
+
+  return `
+    <details class="insight-rail rail-panel" open>
+      <summary class="insight-rail-summary">Last agent insight</summary>
+      <p class="insight-tool"><code>${escapeHtml(tool)}</code></p>
+      ${body}
+    </details>
   `;
 }
 
@@ -551,6 +671,13 @@ function renderLedger(snapshot) {
  * @param {ReturnType<typeof getSnapshot>} snapshot
  */
 function bindEvents(root, snapshot) {
+  for (const details of root.querySelectorAll("details.tool-log-entry")) {
+    details.addEventListener("toggle", () => {
+      const ts = details.getAttribute("data-log-timestamp");
+      expandedLogTimestamp = details.open && ts ? ts : null;
+    });
+  }
+
   root.querySelector("#theme-toggle")?.addEventListener("click", () => {
     applyTheme(currentTheme === "ink" ? "paper" : "ink");
     const toggle = root.querySelector("#theme-toggle");
@@ -711,7 +838,22 @@ function bindEvents(root, snapshot) {
  * @param {() => { source: "native" | "polyfill" | "unavailable", error: string | null, tools: Array<{ name: string, description?: string }> }} getWebmcp
  */
 export function bindApp(root, getWebmcp) {
-  const redraw = () => renderApp(root, getWebmcp());
+  appRoot = root;
+  appGetWebmcp = getWebmcp;
+  const redraw = () => {
+    const snap = getSnapshot();
+    if (snap.options.length === 0) {
+      lastLogLen = 0;
+    } else if (snap.toolLog.length > lastLogLen) {
+      const entry = snap.toolLog[snap.toolLog.length - 1];
+      const regionId = mapToolToRegion(entry.tool);
+      if (regionId) {
+        triggerPulse(regionId, entry.source ?? "agent");
+      }
+    }
+    lastLogLen = snap.toolLog.length;
+    renderApp(root, getWebmcp());
+  };
   subscribe(redraw);
   redraw();
 }
@@ -736,6 +878,89 @@ export function setCurrentPreset(next) {
 function cycleValue(values, current) {
   const index = values.indexOf(current);
   return values[(index + 1) % values.length];
+}
+
+/**
+ * @param {string} tool
+ * @returns {string | null}
+ */
+function mapToolToRegion(tool) {
+  switch (tool) {
+    case "set_decision_context":
+      return "context-strip";
+    case "set_priority_weight":
+      return "weights-section";
+    case "rerank_decision_options":
+    case "apply_human_preference_override":
+    case "add_option":
+    case "compare_decision_options":
+    case "solve_winning_conditions":
+    case "simulate_future_scenario":
+      return "cards-section";
+    case "create_decision":
+      return "preset-switcher";
+    default:
+      return null;
+  }
+}
+
+/**
+ * @param {string} regionId
+ * @param {string} source
+ */
+function triggerPulse(regionId, source) {
+  activePulse = { regionId, source, at: Date.now() };
+  if (pulseTimer != null) {
+    window.clearTimeout(pulseTimer);
+  }
+  pulseTimer = window.setTimeout(() => {
+    activePulse = null;
+    pulseTimer = null;
+    if (appRoot && appGetWebmcp) {
+      renderApp(appRoot, appGetWebmcp());
+    }
+  }, 2000);
+}
+
+/**
+ * @param {HTMLElement} root
+ * @returns {{ id: string, type: string, rangeValue?: string, criterion?: string | null } | null}
+ */
+function captureFocusState(root) {
+  const active = document.activeElement;
+  if (!(active instanceof HTMLElement) || !root.contains(active)) {
+    return null;
+  }
+  /** @type {{ id: string, type: string, rangeValue?: string, criterion?: string | null }} */
+  const state = { id: active.id, type: active.tagName };
+  if (active instanceof HTMLInputElement && active.type === "range") {
+    state.rangeValue = active.value;
+    state.criterion = active.dataset.criterion ?? null;
+  }
+  return state.id ? state : null;
+}
+
+/**
+ * @param {HTMLElement} root
+ * @param {{ id: string, type: string, rangeValue?: string, criterion?: string | null } | null} focusState
+ */
+function restoreFocusState(root, focusState) {
+  if (!focusState?.id) {
+    return;
+  }
+  const el = root.querySelector(`#${CSS.escape(focusState.id)}`);
+  if (!(el instanceof HTMLElement)) {
+    return;
+  }
+  el.focus({ preventScroll: true });
+  if (el instanceof HTMLInputElement && el.type === "range" && focusState.rangeValue != null) {
+    el.value = focusState.rangeValue;
+    el.style.setProperty("--slider-fill", `${(Number(el.value) / 10) * 100}%`);
+    const valueEl = root.querySelector(`#weight-value-${focusState.criterion}`);
+    if (valueEl) {
+      valueEl.textContent = Number(el.value).toFixed(1);
+    }
+  }
 }
 
 /** @param {ReturnType<typeof getSnapshot>} snapshot

@@ -306,6 +306,9 @@ let preset = "";
 /** @type {{ scenario_name: string, leader: { id: string, name: string, displayScore: number } | null, stress_applied: string[], projected_ranking: Array<{ id: string, name: string, displayScore: number, rank: number }> } | null} */
 let lastSimulation = null;
 
+/** @type {{ tool: string, summary: string, payload: unknown } | null} */
+let lastInsight = null;
+
 function notify() {
   for (const listener of listeners) {
     listener();
@@ -573,6 +576,16 @@ export function reset() {
   toolLog = [];
   preset = "";
   lastSimulation = null;
+  lastInsight = null;
+}
+
+/**
+ * @param {{ tool: string, summary: string, payload: unknown } | null} insight
+ */
+export function setLastInsight(insight) {
+  lastInsight = insight
+    ? { tool: insight.tool, summary: insight.summary, payload: clone(insight.payload) }
+    : null;
 }
 
 export function getSnapshot() {
@@ -604,6 +617,9 @@ export function getSnapshot() {
           stress_applied: [...lastSimulation.stress_applied],
           projected_ranking: lastSimulation.projected_ranking.map((item) => ({ ...item })),
         }
+      : null,
+    lastInsight: lastInsight
+      ? { tool: lastInsight.tool, summary: lastInsight.summary, payload: clone(lastInsight.payload) }
       : null,
   });
 }

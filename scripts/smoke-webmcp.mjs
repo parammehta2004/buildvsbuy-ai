@@ -128,6 +128,8 @@ async function runFlow() {
   assert(simParsed.baseline_preserved === true, "Simulation should preserve baseline");
   assert(simParsed.projected_ranking.length === 5, "Projected ranking should include 5 options");
   assert(simParsed.leader !== null, "Projected leader should be non-null");
+  snap = getSnapshot();
+  assert(snap.lastInsight?.tool === "simulate_future_scenario", "lastInsight should be set after simulate");
 
   console.log("Smoke: 9 solve_winning_conditions");
   const solveText = (

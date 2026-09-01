@@ -2,7 +2,7 @@
 **Document:** `CONVO_HANDOFF.md`  
 **Generated At:** 01-09-2026  
 **Calendar note:** Deadline = **03-09-2026 @ 1:00 PM PT**.  
-**Status:** Fronts 1–4 LOCKED · **Slices A–G SHIPPED** · live URL https://webmcp-playground-three.vercel.app · GitHub↔Vercel connected · **next = Slice F** (video + Devpost)
+**Status:** Fronts 1–4 LOCKED · **Slices A–G SHIPPED** · **Tier 2 SHIPPED** · live URL https://webmcp-playground-three.vercel.app · GitHub↔Vercel connected · **next = Slice F** (video + Devpost)
 
 ---
 
@@ -119,9 +119,17 @@
 * **G2:** `SCRAPING_PRESET_OPTIONS` + `loadScrapingDemo()`, header `[ Auth | Scraping ]` segmented switcher, `currentPreset` reset routing, WebMCP `create_decision` scraping enum live, smoke-decision scraping asserts (neutral **`buy > hybrid > build > adopt`** — distinct from Auth), README scraping row, Bible §7/§8.2/§11 sync.
 * **Live:** https://webmcp-playground-three.vercel.app (Vercel auto-deploy from `main`).
 
+### Tier 2 — SHIPPED (01-09-2026)
+* **T2-1:** Expandable tool-log rows (`<details>`) — input JSON + ranking snapshot + stale/current badge; expanded state preserved across redraws.
+* **T2-2:** Agent insight rail (`lastInsight` store) — compare/solve/simulate recap below tool log; default expanded.
+* **T2-3:** "Who moved it last" pulse — region highlight on log growth (human + agent); `prefers-reduced-motion` safe.
+* **T2-4:** Focus restore — slider thumb stays focused during agent-driven redraws; no duplicate `change` events.
+* **UX fix (Phase 0):** null preset on empty boot, disabled Reset, 2dp scores, agent hint.
+
 ### Ordered tasks (updated)
 1. ~~Slices A–G~~ ✅ done.
-2. **NEXT:** Slice F — record &lt;3:00 video + Devpost package.
+2. ~~Tier 2 rubric polish~~ ✅ done.
+3. **NEXT:** Slice F — record &lt;3:00 video + Devpost package.
 
 ### Explicitly NOT blocking ship
 * Video, Devpost (Slice F — parallel track).
@@ -129,7 +137,7 @@
 ---
 
 ## 8. Next chat opening prompt (suggested)
-> Read `CONVO_HANDOFF.md` + Bible §6–8 + §11. Fronts 1–4 locked. Slices A–G SHIPPED. Live URL: https://webmcp-playground-three.vercel.app. Next: Slice F video + Devpost. Do not re-open product design or UI layout.
+> Read `CONVO_HANDOFF.md` + Bible §6–8 + §11. Fronts 1–4 locked. Slices A–G + Tier 2 SHIPPED. Live URL: https://webmcp-playground-three.vercel.app. Next: Slice F video + Devpost. Do not re-open product design or UI layout.
 
 ---
 

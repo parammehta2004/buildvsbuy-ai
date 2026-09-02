@@ -16,6 +16,9 @@ import {
   solveWinningConditions,
 } from "./decision.js";
 
+/** Current tool-call source; set by runDecisionTool, defaults to agent. */
+let pendingSource = "agent";
+
 /**
  * @param {unknown} value
  * @returns {string}
@@ -27,8 +30,9 @@ function asText(value) {
 /**
  * Iron rules injected into agent context on the first agent-driven tool call
  * (create_decision). WebMCP has no system-prompt API, so this return-prose is
- * the enforced channel. The Load-Auth-Preset UI button bypasses this tool, so
- * the rerank_decision_options summary carries a one-line reminder as the
+ * the enforced channel. Human UI also calls create_decision via runDecisionTool;
+ * AGENT_BRIEFING injects only when source === "agent". The
+ * rerank_decision_options summary carries a one-line reminder as the
  * reliable injection point for any ranking question.
  */
 const AGENT_BRIEFING = [
@@ -86,11 +90,13 @@ const INSIGHT_TOOLS = new Set([
 ]);
 
 function finish(toolName, input, summary, result, preamble) {
+  const source = pendingSource;
   if (INSIGHT_TOOLS.has(toolName)) {
     setLastInsight({ tool: toolName, summary, payload: result });
   }
-  appendToolLog({ tool: toolName, input, summary, source: "agent" });
-  const parts = preamble
+  appendToolLog({ tool: toolName, input, summary, source });
+  const usePreamble = preamble && source === "agent";
+  const parts = usePreamble
     ? [preamble, summary, staleNote(getSnapshot()), asText(result)]
     : [summary, staleNote(getSnapshot()), asText(result)];
   return toolResult(parts.join("\n\n"));
@@ -440,6 +446,26 @@ export function buildDecisionTools() {
       },
     },
   ];
+}
+
+/**
+ * Run a decision tool by name with a tagged source (human | agent).
+ * Used by UI controls so human actions traverse the same execute path as the agent.
+ * Single-threaded; no tool calls another tool, so pendingSource cannot nest-clobber.
+ * @param {string} name
+ * @param {unknown} input
+ * @param {{ source?: "human" | "agent" }} [options]
+ */
+export async function runDecisionTool(name, input, { source = "agent" } = {}) {
+  const tool = buildDecisionTools().find((t) => t.name === name);
+  if (!tool) throw new Error(`Unknown decision tool: ${name}`);
+  const prev = pendingSource;
+  pendingSource = source;
+  try {
+    return await tool.execute(input);
+  } finally {
+    pendingSource = prev;
+  }
 }
 
 /**

@@ -1,15 +1,10 @@
 import {
   CRITERION_KEYS,
   CRITERION_LABELS,
-  appendToolLog,
   getSnapshot,
-  loadDefaultDemo,
-  loadScrapingDemo,
-  rerankDecisionOptions,
-  setDecisionContext,
-  setPriorityWeight,
   subscribe,
 } from "./decision.js";
+import { runDecisionTool } from "./webmcp.js";
 
 const EXPECTED_TOOLS = Object.freeze([
   "create_decision",
@@ -25,6 +20,21 @@ const EXPECTED_TOOLS = Object.freeze([
 
 const SCALE_BANDS = Object.freeze(["<1k", "1k-10k", "10k-50k", "50k+"]);
 const COMPLIANCE_TIERS = Object.freeze(["none", "soc2", "hipaa"]);
+
+const TRY_PROMPTS = Object.freeze([
+  {
+    act: "Act 1",
+    text: "Set time-to-prototype weight to 9 and rerank. Why did Build drop?",
+  },
+  {
+    act: "Act 2",
+    text: "Load scraping preset. Simulate HIPAA at 50k+ MRU and explain the projected leader change.",
+  },
+  {
+    act: "Act 3",
+    text: "Set core IP to true and pin Build with override reason. Show score gap and liabilities.",
+  },
+]);
 
 const TYPE_LABELS = Object.freeze({
   build: "BUILD",
@@ -47,6 +57,9 @@ let activePulse = null;
 
 /** @type {ReturnType<typeof setTimeout> | null} */
 let pulseTimer = null;
+
+/** Guards overlapping preset loads (3 sequential tool calls). */
+let presetLoadPending = false;
 
 /** @type {number} */
 let lastLogLen = 0;
@@ -115,6 +128,7 @@ export function renderApp(root, webmcp) {
         ${renderWeightsSection(snapshot, pulseClass, pulseBadge)}
       </div>
         <aside class="right-rail">
+          ${renderPromptsPanel(snapshot)}
           ${renderToolLog(snapshot)}
           ${renderAgentInsight(snapshot)}
           ${renderLedger(snapshot)}
@@ -137,9 +151,7 @@ function renderHeader(snapshot, webmcp, pulseClass, pulseBadge) {
   const problem = hasDecision
     ? snapshot.problemStatement
     : "When AI makes prototypes free, the scarce resource isn't building — it's knowing what's worth owning.";
-  const resetTitle = hasDecision
-    ? `Reset ${currentPreset === "scraping" ? "Scraping" : "Auth"} demo to Solo · 1k–10k · 14d`
-    : "Load a preset with Auth or Scraping above";
+  const resetTitle = `Reset ${currentPreset === "scraping" ? "Scraping" : "Auth"} demo to Solo · 1k–10k · 14d`;
 
   return `
     <header class="header">
@@ -155,15 +167,15 @@ function renderHeader(snapshot, webmcp, pulseClass, pulseBadge) {
         <button type="button" class="btn btn-ghost" id="theme-toggle" aria-label="Toggle theme">
           ${currentTheme === "ink" ? "Paper theme" : "Ink theme"}
         </button>
+        ${hasDecision ? `
         <button
           type="button"
           class="btn btn-ghost"
           id="load-auth-preset"
           title="${escapeHtml(resetTitle)}"
-          ${hasDecision ? "" : "disabled"}
         >
           Reset demo
-        </button>
+        </button>` : ""}
       </div>
     </header>
   `;
@@ -309,12 +321,21 @@ function renderOverrideBanner(snapshot) {
  */
 function renderCardsSection(snapshot, pulseClass, pulseBadge) {
   if (snapshot.options.length === 0) {
+    const params = new URLSearchParams(window.location.search);
+    const blankBoot = params.get("blank") === "1" || params.get("agent") === "1";
+    const emptyHint = blankBoot
+      ? "Empty canvas for agent recording. Human: load a demo with the buttons above."
+      : "Recording agent video? Open <code>?blank=1</code>.";
     return `
       <section class="cards-section${pulseClass("cards-section")}" id="cards-section" aria-label="Decision options">
         ${pulseBadge("cards-section")}
         <div class="cards-grid cards-empty-state">
           <p class="cards-empty">Waiting for decision…</p>
-          <p class="cards-empty-hint">Agent: call <code>create_decision</code> with preset <code>auth</code> or <code>scraping</code>. Human: pick a preset above.</p>
+          <div class="cards-empty-actions">
+            <button type="button" class="btn btn-primary" data-action="load-auth-demo">Load Auth Demo</button>
+            <button type="button" class="btn btn-ghost" data-action="load-scraping-demo">Load Scraping Demo</button>
+          </div>
+          <p class="cards-empty-hint">${emptyHint}</p>
         </div>
       </section>
     `;
@@ -468,6 +489,63 @@ function renderSlider(criterion, weight) {
         style="--slider-fill: ${fillPct}%"
       />
     </label>
+  `;
+}
+
+/**
+ * @returns {string}
+ */
+function renderPromptRows() {
+  return `
+    <ul class="prompts-list">
+      ${TRY_PROMPTS.map(
+        (item, index) => `
+          <li class="prompt-row">
+            <span class="prompt-act">${escapeHtml(item.act)}</span>
+            <p class="prompt-text">${escapeHtml(item.text)}</p>
+            <button
+              type="button"
+              class="btn btn-ghost prompt-copy-btn"
+              data-prompt-index="${index}"
+              aria-label="Copy ${escapeHtml(item.act)} prompt"
+            >Copy</button>
+          </li>
+        `,
+      ).join("")}
+    </ul>
+  `;
+}
+
+/**
+ * Copy-paste prompts for judges testing the agent path.
+ * @param {ReturnType<typeof getSnapshot>} snapshot
+ */
+function renderPromptsPanel(snapshot) {
+  const hasDecision = snapshot.options.length > 0;
+  const params = new URLSearchParams(window.location.search);
+  const blankBoot = params.get("blank") === "1" || params.get("agent") === "1";
+
+  let subtitle;
+  if (hasDecision) {
+    subtitle = "Copy into ChatGPT to drive the demo.";
+  } else if (blankBoot) {
+    subtitle = "Blank canvas for agent recording — copy a prompt below into ChatGPT.";
+  } else {
+    subtitle = "Copy a prompt into ChatGPT, or load a demo from the main canvas.";
+  }
+
+  const blankHint =
+    !hasDecision && !blankBoot
+      ? `<p class="prompts-empty-hint">Recording agent video? Open <code>?blank=1</code> for an empty canvas.</p>`
+      : "";
+
+  return `
+    <details class="prompts-panel rail-panel" open>
+      <summary class="prompts-panel-summary">Try this prompt</summary>
+      <p class="prompts-subtitle">${escapeHtml(subtitle)}</p>
+      ${renderPromptRows()}
+      ${blankHint}
+    </details>
   `;
 }
 
@@ -679,6 +757,29 @@ function renderLedger(snapshot) {
 }
 
 /**
+ * Load a preset through the same WebMCP execute path as the agent.
+ * @param {"auth" | "scraping"} preset
+ */
+export async function loadPresetViaTools(preset) {
+  if (presetLoadPending) {
+    return;
+  }
+  presetLoadPending = true;
+  currentPreset = preset;
+  try {
+    await runDecisionTool("create_decision", { preset, org_context: "solo" }, { source: "human" });
+    await runDecisionTool(
+      "set_decision_context",
+      { scale_band: "1k-10k", timeline_days: 14 },
+      { source: "human" },
+    );
+    await runDecisionTool("rerank_decision_options", {}, { source: "human" });
+  } finally {
+    presetLoadPending = false;
+  }
+}
+
+/**
  * @param {HTMLElement} root
  * @param {ReturnType<typeof getSnapshot>} snapshot
  */
@@ -698,35 +799,52 @@ function bindEvents(root, snapshot) {
     }
   });
 
-  root.querySelector("#load-auth-preset")?.addEventListener("click", () => {
-    if (snapshot.options.length === 0) {
-      return;
-    }
+  root.querySelector("#load-auth-preset")?.addEventListener("click", async () => {
     try {
-      if (currentPreset === "scraping") {
-        loadScrapingDemo();
-        appendToolLog({
-          tool: "create_decision",
-          input: { preset: "scraping", action: "reset" },
-          summary: "Human: reset Scraping demo",
-          source: "human",
-        });
-      } else {
-        loadDefaultDemo();
-        appendToolLog({
-          tool: "create_decision",
-          input: { preset: "auth", action: "reset" },
-          summary: "Human: reset Auth demo",
-          source: "human",
-        });
-      }
+      const preset = currentPreset === "scraping" ? "scraping" : "auth";
+      await loadPresetViaTools(preset);
     } catch (error) {
       window.alert(error instanceof Error ? error.message : String(error));
     }
   });
 
+  for (const button of root.querySelectorAll(".prompt-copy-btn")) {
+    button.addEventListener("click", async () => {
+      const index = Number(button.getAttribute("data-prompt-index"));
+      const prompt = TRY_PROMPTS[index];
+      if (!prompt) {
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(prompt.text);
+        const prev = button.textContent;
+        button.textContent = "Copied!";
+        window.setTimeout(() => {
+          button.textContent = prev;
+        }, 1500);
+      } catch {
+        window.alert("Could not copy to clipboard.");
+      }
+    });
+  }
+
+  for (const button of root.querySelectorAll(".cards-empty-actions [data-action]")) {
+    button.addEventListener("click", async () => {
+      const action = button.getAttribute("data-action");
+      try {
+        if (action === "load-auth-demo") {
+          await loadPresetViaTools("auth");
+        } else if (action === "load-scraping-demo") {
+          await loadPresetViaTools("scraping");
+        }
+      } catch (error) {
+        window.alert(error instanceof Error ? error.message : String(error));
+      }
+    });
+  }
+
   for (const button of root.querySelectorAll("[data-preset-switch]")) {
-    button.addEventListener("click", () => {
+    button.addEventListener("click", async () => {
       const preset = button.getAttribute("data-preset-switch");
       if (preset !== "auth" && preset !== "scraping") {
         return;
@@ -735,75 +853,34 @@ function bindEvents(root, snapshot) {
         return;
       }
       try {
-        currentPreset = preset;
-        if (preset === "scraping") {
-          loadScrapingDemo();
-          appendToolLog({
-            tool: "create_decision",
-            input: { preset: "scraping", action: snapshot.options.length > 0 ? "switch" : "load" },
-            summary: snapshot.options.length > 0 ? "Human: switched to Scraping preset" : "Human: loaded Scraping preset",
-            source: "human",
-          });
-        } else {
-          loadDefaultDemo();
-          appendToolLog({
-            tool: "create_decision",
-            input: { preset: "auth", action: snapshot.options.length > 0 ? "switch" : "load" },
-            summary: snapshot.options.length > 0 ? "Human: switched to Auth preset" : "Human: loaded Auth preset",
-            source: "human",
-          });
-        }
+        await loadPresetViaTools(preset);
       } catch (error) {
         window.alert(error instanceof Error ? error.message : String(error));
       }
     });
   }
 
-  root.querySelector("#rerank-button")?.addEventListener("click", () => {
+  root.querySelector("#rerank-button")?.addEventListener("click", async () => {
     try {
-      rerankDecisionOptions();
-      appendToolLog({
-        tool: "rerank_decision_options",
-        input: {},
-        summary: "Human: reranked",
-        source: "human",
-      });
+      await runDecisionTool("rerank_decision_options", {}, { source: "human" });
     } catch (error) {
       window.alert(error instanceof Error ? error.message : String(error));
     }
   });
 
   for (const button of root.querySelectorAll("[data-context]")) {
-    button.addEventListener("click", () => {
+    button.addEventListener("click", async () => {
       const key = button.getAttribute("data-context");
       try {
         if (key === "scale_band") {
           const next = cycleValue(SCALE_BANDS, snapshot.scaleBand);
-          setDecisionContext({ scale_band: next });
-          appendToolLog({
-            tool: "set_decision_context",
-            input: { scale_band: next },
-            summary: `Human: scale_band → ${next}`,
-            source: "human",
-          });
+          await runDecisionTool("set_decision_context", { scale_band: next }, { source: "human" });
         } else if (key === "compliance_tier") {
           const next = cycleValue(COMPLIANCE_TIERS, snapshot.complianceTier);
-          setDecisionContext({ compliance_tier: next });
-          appendToolLog({
-            tool: "set_decision_context",
-            input: { compliance_tier: next },
-            summary: `Human: compliance_tier → ${next}`,
-            source: "human",
-          });
+          await runDecisionTool("set_decision_context", { compliance_tier: next }, { source: "human" });
         } else if (key === "is_core_ip") {
           const next = !snapshot.isCoreIp;
-          setDecisionContext({ is_core_ip: next });
-          appendToolLog({
-            tool: "set_decision_context",
-            input: { is_core_ip: next },
-            summary: `Human: is_core_ip → ${next}`,
-            source: "human",
-          });
+          await runDecisionTool("set_decision_context", { is_core_ip: next }, { source: "human" });
         }
       } catch (error) {
         window.alert(error instanceof Error ? error.message : String(error));
@@ -823,20 +900,12 @@ function bindEvents(root, snapshot) {
       target.style.setProperty("--slider-fill", `${(weight / 10) * 100}%`);
     });
 
-    input.addEventListener("change", (event) => {
+    input.addEventListener("change", async (event) => {
       const target = /** @type {HTMLInputElement} */ (event.currentTarget);
       const criterion = target.dataset.criterion;
       const weight = Number(target.value);
       try {
-        const result = setPriorityWeight({ criterion, weight });
-        if (result.changed) {
-          appendToolLog({
-            tool: "set_priority_weight",
-            input: { criterion, weight },
-            summary: `Human: ${criterion} → ${weight.toFixed(1)}`,
-            source: "human",
-          });
-        }
+        await runDecisionTool("set_priority_weight", { criterion, weight }, { source: "human" });
       } catch (error) {
         window.alert(error instanceof Error ? error.message : String(error));
       }

@@ -34,18 +34,21 @@ async function boot() {
     }
   }
 
-  // Agent-first boot: default to an empty canvas so the agent (or a human
-  // clicking a preset segment / Reset demo) creates the workspace on camera.
-  // ?preset=auth or ?preset=scraping preloads a demo for non-video browsing.
   const params = new URLSearchParams(window.location.search);
+  const wantBlank = params.get("blank") === "1" || params.get("agent") === "1";
   const bootPreset = params.get("preset");
-  if (bootPreset === "scraping") {
-    setCurrentPreset("scraping");
-    loadScrapingDemo();
-  } else if (bootPreset === "auth") {
-    setCurrentPreset("auth");
-    loadDefaultDemo();
+
+  if (!wantBlank) {
+    if (bootPreset === "scraping") {
+      setCurrentPreset("scraping");
+      loadScrapingDemo();
+    } else {
+      // default (no params) OR ?preset=auth -> Auth demo
+      setCurrentPreset("auth");
+      loadDefaultDemo();
+    }
   }
+  // wantBlank === true -> leave empty canvas for agent video recording
 
   bindApp(root, () => webmcp);
 }

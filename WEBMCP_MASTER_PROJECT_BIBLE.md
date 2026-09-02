@@ -192,7 +192,7 @@ Every decision evaluated by the engine falls across four primary vectors:
    * Invented metrics must set `estimate: true` until human confirms (prevents hallucinated TCO looking official).
 4. **Honest 3-act demo arc (replaces fake “Clerk wins at 10× from 1k”):**
    * Act 1 (two beats): (a) Neutral default weights → `Adopt > Hybrid > Build > Buy`; Build≈Buy tied at the bottom (sober default, no reflex wins). (b) Agent biases toward prototype speed (`set_priority_weight(time_to_prototype, 9)` + `rerank`) → `Adopt > Hybrid > Buy > Build`; **Build drops to last** because over-weighting speed punishes the slowest option. This *is* the vibe-coding trap on camera: prototype speed is no longer the bottleneck, and over-weighting it makes you abandon Build for the wrong reasons. Crossover is `w_ttp > 8.5` (algebraic, verified in smoke harness).
-   * Act 2: Stress via `simulate_future_scenario` with `soc2` compliance and/or scale into `50k+`. The tool *projects* a stressed ranking (returned in the payload, shown as a UI banner) — it does **not** reorder baseline cards or scores. On the Auth preset the projected leader often stays Adopt; the teaching point is which axes move under stress, not a winner swap. Rerank only repaints the canvas when weights change.
+   * Act 2: Stress via `simulate_future_scenario`. The tool *projects* a stressed ranking (payload + UI banner) — it does **not** reorder baseline cards or scores. **Auth** + `soc2` and/or `50k+`: projected leader often stays Adopt; teaching point is which axes move, not a winner swap. **Scraping Act 2 (LOCKED, smoke-decision as of 02-09-2026):** load Scraping (neutral `buy > hybrid > build > adopt`), then `compliance_tier=hipaa` + `scale_band=50k+` → projected leader **`hybrid`**. That is the visible leader-flip beat. Rerank only repaints the canvas when weights change.
    * Act 3: Core-IP override → pin Build + show score gap + Liability Ledger.
 
 ---
@@ -242,6 +242,7 @@ Display scores to **1 decimal**. Tool copy: estimates, not accounting.
 
 ### 6.5 Simulation, Invariants, Override
 * **Primary stress:** `compliance_tier → soc2` and/or `scale_band → 50k+` (vendor overage / Business features). `simulate_future_scenario` *projects* a stressed ranking without mutating baseline cards; avoid demo relying on 10× from 1k MRU alone.
+* **Scraping HIPAA + 50k+ (LOCKED):** projected leader is `hybrid`. Do not retune `projectOption` in a way that returns `buy` (or any non-hybrid) under that stress; `scripts/smoke-decision.mjs` asserts `projectedLeader === "hybrid"`.
 * **Also supported:** budget contraction, timeline crunch.
 * **"Yes, Build It" invariants** (surfaced in tool text): domain uniqueness; `is_core_ip`; parasitic SaaS scale; sovereignty/on-prem.
 * **Override:** `apply_human_preference_override` supports **pin + score gap + Liability Ledger** (`liabilities[]`) so Act 3 is honest on camera.
@@ -250,7 +251,7 @@ Display scores to **1 decimal**. Tool copy: estimates, not accounting.
 
 ## 7. WebMCP Tool Surface Specification (Front 2 v2 — 9 Tools LOCKED)
 
-Imperative registration only: `document.modelContext.registerTool(...)`. Every `execute` appends to the Tool log with `source: "agent"`.
+Imperative registration only: `document.modelContext.registerTool(...)`. Tool log `source` defaults to `"agent"` (direct `execute` / registered WebMCP path). Human UI must call `runDecisionTool(name, input, { source: "human" })` so the same `execute` → `finish` path tags `"human"`. `AGENT_BRIEFING` preamble injects only when `source === "agent"` (not on human `create_decision`).
 
 **`create_decision` presets (live):** `auth` seeds the Authentication flagship (4 options). `scraping` seeds AI Web Scraping (4 options, author estimates). `custom` or omit preset for a blank slate — then `add_option` per candidate.
 

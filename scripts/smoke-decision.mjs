@@ -118,4 +118,20 @@ assert(
   `Scraping neutral last should be adopt, got: ${scrapingIds.join(", ")}`,
 );
 
+console.log("Smoke: Act 2 Scraping HIPAA+50k+ leader flip");
+loadScrapingDemo();
+const sim = simulateFutureScenario({
+  scenario_name: "HIPAA at 50k+ MRU",
+  scale_band: "50k+",
+  compliance_tier: "hipaa",
+});
+assert(sim.projected_ranking.length === 4, "Projected ranking should have 4 options");
+const projectedLeader = sim.projected_ranking[0].id;
+console.log("Scraping projected leader under HIPAA+50k+:", projectedLeader);
+// Locked Act 2 drama beat: HIPAA + 50k+ must project Hybrid (Playwright+Bright Data), not Firecrawl.
+assert(
+  projectedLeader === "hybrid",
+  `Act 2 Scraping HIPAA+50k+ projected leader must be hybrid, got ${projectedLeader}`,
+);
+
 console.log("PASS: Slice A decision engine smoke tests");

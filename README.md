@@ -2,20 +2,48 @@
 
 > *When AI makes prototypes free, the scarce resource isn't building — it's knowing what's worth owning.*
 
+**Demo video:** *[Add YouTube embed here after recording — see [Agent demo video script](#agent-demo-video-script)]*
+
+| | |
+|---|---|
+| **Live demo** | https://webmcp-playground-three.vercel.app/ |
+| **Agent recording URL** | https://webmcp-playground-three.vercel.app/?blank=1 |
+| **Challenge** | [OpenAI WebMCP Challenge](https://webmcp.devpost.com/) on Devpost |
+| **Written narrative** | [docs/DEVPOST.md](docs/DEVPOST.md) |
+| **Submission checklist** | [docs/SUBMISSION_CHECKLIST.md](docs/SUBMISSION_CHECKLIST.md) |
+
+### Screenshot (Act 3)
+
+After you run Act 3 in the browser, capture the override banner (pinned Build vs math leader, score gap) plus the populated **Liability ledger** in the right rail. Save as `docs/screenshots/act3-override.png` and uncomment the line below.
+
+<!-- ![Act 3 — human override with liability ledger](docs/screenshots/act3-override.png) -->
+
+---
+
 An AI-native **build-vs-buy** decision environment centered on the **Authentication & Multi-Tenant Permissions** flagship scenario. Humans and browser-integrated agents collaboratively evaluate whether an idea should be **Built**, **Bought (SaaS)**, **Adopted (Open Source)**, or executed as a **Hybrid**. The agent operates, audits, simulates, and negotiates structured decision state directly inside the web page via **WebMCP** tools — not through fragile DOM scraping or a side chat.
 
 **Structured author estimates, not financial advice.** Axis numbers are plausible demo inputs for comparison, not audited forecasts.
 
-Built for the [OpenAI WebMCP Challenge](https://webmcp.devpost.com/).
+## Judge quick-start
 
-**Live demo:** https://webmcp-playground-three.vercel.app
+Open the [live demo](https://webmcp-playground-three.vercel.app/) — Auth loads by default. Use the **Try this prompt** panel in the right rail (copy buttons) or paste these into ChatGPT Desktop / Chrome 149+ with WebMCP enabled:
+
+| Act | Prompt |
+|-----|--------|
+| **1 — vibe trap** | Set time-to-prototype weight to 9 and rerank. Why did Build drop? |
+| **2 — stress** | Load scraping preset. Simulate HIPAA at 50k+ MRU and explain the projected leader change. |
+| **3 — negotiate** | Set core IP to true and pin Build with override reason. Show score gap and liabilities. |
+
+**Act 2 alternate wording:** Switch to scraping preset, then stress-test for HIPAA compliance at 50k+ users.
+
+For a clean agent recording canvas, open [`?blank=1`](https://webmcp-playground-three.vercel.app/?blank=1) — prompts remain copyable in the right rail.
 
 ## Why WebMCP is a native fit
 
 Traditional agents browse pages by screenshot scraping and simulated clicks — brittle, lossy, and stateless. BuildVsBuy.ai exposes **clean, typed, deterministic tools** directly to the browser-integrated agent via `document.modelContext.registerTool`. The web page becomes a programmable canvas where the human and agent co-manipulate **one shared decision model**:
 
 - The agent writes structured context (`set_decision_context`), adds options, sets weights, reranks, simulates stress scenarios, and even applies a human override — all through typed tool calls.
-- The human sees the same canvas update live and can steer with sliders / toggles that call the **same store APIs**.
+- The human sees the same canvas update live and can steer with sliders / toggles that traverse the **same `execute` path** as the agent (`runDecisionTool`, `source: human`).
 - Every tool execution streams into an on-screen **Tool log** — human clicks and agent calls share one store, visible proof of WebMCP leverage.
 
 ## The 4 options
@@ -27,7 +55,7 @@ Traditional agents browse pages by screenshot scraping and simulated clicks — 
 | **ADOPT** | Better-Auth | Crawl4AI (self-hosted) |
 | **HYBRID** | Supabase Auth + Postgres RLS | Playwright + Bright Data proxies |
 
-Use the header **Auth | Scraping** switcher (or `create_decision({ preset: "scraping" })` via WebMCP) to load the scraping scenario. Boot defaults to Auth for the demo video script. Neutral Scraping rank under default weights is **Buy > Hybrid > Build > Adopt** (managed API leads; self-host Crawl4AI trails on solo vibe maintenance) — unlike Auth's Adopt-led order.
+Use the header **Auth | Scraping** switcher (or `create_decision({ preset: "scraping" })` via WebMCP) to load the scraping scenario. Boot defaults to Auth on `/`. Neutral Scraping rank under default weights is **Buy > Hybrid > Build > Adopt** — unlike Auth's Adopt-led order.
 
 ## Seven scoring axes (no double-count)
 
@@ -53,11 +81,11 @@ All registered imperatively via `document.modelContext.registerTool`:
 4. `set_priority_weight` — update one criterion weight (redundant-write guard; marks ranking stale)
 5. `rerank_decision_options` — recalculate ranking (required after weight changes)
 6. `compare_decision_options` — pairwise tradeoff breakdown across all axes
-7. `simulate_future_scenario` — stress-test (prefer `soc2` / `50k+` scale)
+7. `simulate_future_scenario` — stress-test (HIPAA + `50k+` on Scraping flips projected leader away from Buy)
 8. `solve_winning_conditions` — sensitivity: what must change for a target to win
 9. `apply_human_preference_override` — pin + score gap + Liability Ledger for honest human override
 
-Every `execute` appends to the Tool log (agent path). Human slider, context-chip, rerank, and reset actions append with `source: human` too.
+Every `execute` appends to the Tool log. Human slider, context-chip, rerank, preset load, and reset actions use `runDecisionTool` with `source: human`.
 
 ## Run
 
@@ -68,7 +96,7 @@ npm install
 npm run dev
 ```
 
-Open the printed localhost URL (Vite defaults to `http://localhost:5173`) or the [live demo](https://webmcp-playground-three.vercel.app). WebMCP needs a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts): localhost and HTTPS count.
+Open the printed localhost URL (Vite defaults to `http://localhost:5173`) or the [live demo](https://webmcp-playground-three.vercel.app/). WebMCP needs a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts): localhost and HTTPS count.
 
 ```bash
 npm run build
@@ -78,23 +106,38 @@ npm run preview
 ### Verify the engine (no browser needed)
 
 ```bash
-node scripts/smoke-decision.mjs   # Slice A: store + math + override
-node scripts/smoke-webmcp.mjs     # Slice B: all 9 tools, Act 1–3 flow
+node scripts/smoke-decision.mjs   # store + math + Scraping Act 2 leader flip
+node scripts/smoke-webmcp.mjs     # all 9 tools, Act 1–3 flow + human-source tagging
+npm run lint
 ```
 
 ## Demo arc (honest 3-act)
 
-1. **Act 1 — vibe trap:** neutral weights rank `Adopt > Hybrid > Build > Buy`; biasing Time-to-Prototype weight high drops Build to last — the prototype-speed trap.
-2. **Act 2 — stress:** `simulate_future_scenario` with `soc2` compliance and/or `50k+` scale *projects* a stressed ranking (returned in the tool payload and shown as a banner) — it does **not** reorder the baseline cards. On the Auth preset the projected leader often stays Adopt; the lesson is which axes move, not a winner swap. Rerank only changes the canvas when weights change.
+1. **Act 1 — vibe trap:** neutral Auth weights rank `Adopt > Hybrid > Build > Buy`; biasing Time-to-Prototype weight high drops Build to last — the prototype-speed trap.
+2. **Act 2 — stress:** on **Scraping**, `simulate_future_scenario` with HIPAA compliance and `50k+` scale *projects* a stressed ranking where the leader flips **away from Buy** (banner + tool payload). Baseline cards stay unchanged until you rerank after a weight change.
 3. **Act 3 — negotiate:** human asserts core IP → `apply_human_preference_override` pins Build, shows the score gap vs the math leader, and logs a structured Liability Ledger. *Yes, build it — with eyes open.*
+
+## Agent demo video script
+
+Record **after** Slices 1–6 are deployed. Target **under 3 minutes**, public on YouTube, then embed at the top of this README and paste the link on Devpost.
+
+| Step | Detail |
+|------|--------|
+| **Environment** | ChatGPT Desktop in-app browser **or** Chrome 149+ with `#enable-webmcp-testing` |
+| **URL** | https://webmcp-playground-three.vercel.app/?blank=1 |
+| **Act 1** | Agent `create_decision` (auth) → `set_priority_weight` TTP=9 → `rerank_decision_options` (Build drops) |
+| **Act 2** | `create_decision` (scraping) → `simulate_future_scenario` HIPAA + 50k+ (projected leader flips off Buy) |
+| **Act 3** | `set_decision_context` core_ip=true → `apply_human_preference_override` (pin Build, score gap, liabilities) |
+| **Proof** | Tool log fills entry-by-entry; agent must not invent ranks without a matching log entry |
 
 ## How it works
 
-1. `src/main.js` installs the WebMCP polyfill only when native `document.modelContext` is missing.
-2. `src/webmcp.js` registers the 9 tools; each `execute` calls the matching `src/decision.js` store API and appends to the tool log.
-3. `src/decision.js` is the single source of truth: context, options, weights, normalize+score, skill modifiers, simulate/solve, override + liabilities, `notify`/`subscribe`.
-4. `src/ui.js` subscribes and full-redraws from `getSnapshot()`; human controls (sliders, toggles, preset switcher, Reset demo, Rerank, theme toggle) call the same store APIs as the agent.
-5. **No backend.** Browser-only Vite + vanilla JS. In-memory state (persistence deferred for v1).
+1. `src/main.js` boots Auth by default on `/`; `?blank=1` or `?agent=1` leaves an empty canvas for recording.
+2. `src/main.js` installs the WebMCP polyfill only when native `document.modelContext` is missing.
+3. `src/webmcp.js` registers the 9 tools; each `execute` calls the matching `src/decision.js` store API and appends to the tool log. `runDecisionTool` threads `source: human | agent`.
+4. `src/decision.js` is the single source of truth: context, options, weights, normalize+score, skill modifiers, simulate/solve, override + liabilities, `notify`/`subscribe`.
+5. `src/ui.js` subscribes and full-redraws from `getSnapshot()`; human controls call `runDecisionTool` so they share the agent execute path.
+6. **No backend.** Browser-only Vite + vanilla JS. In-memory state (persistence deferred for v1).
 
 ### Discover the registered tools from the page console
 

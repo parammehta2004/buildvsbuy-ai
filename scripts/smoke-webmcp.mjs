@@ -1,4 +1,4 @@
-import { buildDecisionTools } from "../src/webmcp.js";
+import { buildDecisionTools, runDecisionTool } from "../src/webmcp.js";
 import { getSnapshot } from "../src/decision.js";
 
 const EXPECTED_TOOLS = [
@@ -41,7 +41,11 @@ async function runFlow() {
   // custom fixture (custom-x) is added afterwards and only its wiring is
   // checked — never its rank — so perturbing its metrics cannot break this.
   console.log("Smoke: 1 create_decision");
-  await tools.create_decision.execute({ preset: "auth" });
+  const createText = (await tools.create_decision.execute({ preset: "auth" })).content[0].text;
+  assert(
+    createText.includes("BUILDVSBUY AGENT BRIEFING"),
+    "Agent create_decision must inject AGENT_BRIEFING preamble",
+  );
   let snap = getSnapshot();
   assert(snap.options.length === 4, "Auth preset should seed 4 options");
   assert(snap.rankingCurrent === false, "Ranking should start stale");
@@ -171,6 +175,10 @@ async function runFlow() {
 
   const toolLog = getSnapshot().toolLog;
   assert(toolLog.length === 10, `Expected 10 tool log entries, got ${toolLog.length}`);
+  assert(
+    toolLog.every((entry) => entry.source === "agent"),
+    "Direct tools.*.execute path must log source: agent for all 10 entries",
+  );
   const loggedTools = new Set(toolLog.map((entry) => entry.tool));
   for (const name of EXPECTED_TOOLS) {
     assert(loggedTools.has(name), `Tool log missing entry for ${name}`);
@@ -188,6 +196,11 @@ async function runFlow() {
 
   const contextEntry = toolLog.find((entry) => entry.tool === "set_decision_context");
   assert(contextEntry?.rankingCurrent === false, "set_decision_context log should have rankingCurrent false");
+
+  console.log("Smoke: runDecisionTool human-source tagging");
+  await runDecisionTool("set_priority_weight", { criterion: "customization", weight: 7 }, { source: "human" });
+  const entry = getSnapshot().toolLog[getSnapshot().toolLog.length - 1];
+  assert(entry?.source === "human", "runDecisionTool human call must log source: human");
 
   console.log("PASS: Slice B WebMCP 9-tool smoke tests");
 }

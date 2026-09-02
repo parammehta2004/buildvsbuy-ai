@@ -1,0 +1,62 @@
+# Submission checklist — OpenAI WebMCP Challenge
+
+**Submission deadline:** 03-09-2026  
+**Judging period ends:** 21-09-2026  
+
+Use this list before clicking Submit on Devpost.
+
+---
+
+## Live product
+
+- [ ] **Live URL** loads in ChatGPT in-app browser: https://webmcp-playground-three.vercel.app/
+- [ ] **`/` (no params)** shows 4 Auth cards, ranked, Winner badge visible
+- [ ] **`/?blank=1`** shows empty canvas + Load Auth/Scraping CTAs + copyable Try-this-prompt panel
+- [ ] **`/?preset=scraping`** shows Scraping cards (Buy #1 under default weights)
+- [ ] **Try-this-prompt** panel — all three Copy buttons work (paste text matches)
+- [ ] **Human slider → Rerank** — stale banner, then updated ranks; tool log shows `source: human`
+- [ ] **Act 2 on Scraping** — HIPAA + 50k+ simulation banner shows projected leader **not** Buy
+- [ ] **Act 3** — override banner + Liability ledger populate after pin
+
+## Repository
+
+- [ ] GitHub repo is **public**
+- [ ] **MIT** license visible (repo About + `LICENSE` file)
+- [ ] WebMCP `registerTool` usage is obvious in repo (`src/webmcp.js`)
+- [ ] README hero has live URL, `?blank=1`, judge quick-start
+- [ ] `npm run lint` — exit 0
+- [ ] `npm run build` — exit 0
+- [ ] `node scripts/smoke-decision.mjs` — exit 0
+- [ ] `node scripts/smoke-webmcp.mjs` — exit 0
+
+## Video (record last)
+
+- [ ] Recorded from https://webmcp-playground-three.vercel.app/?blank=1
+- [ ] Environment: ChatGPT Desktop in-app browser **or** Chrome 149+ with `#enable-webmcp-testing`
+- [ ] **Under 3 minutes**, all three acts visible
+- [ ] Tool log fills entry-by-entry during recording (no invented ranks)
+- [ ] Uploaded to **YouTube**, public
+- [ ] YouTube link added to README hero (embed or link)
+- [ ] YouTube link pasted on Devpost
+
+## Screenshot (optional but recommended)
+
+- [ ] Capture Act 3 state (override banner + Liability ledger)
+- [ ] Save as `docs/screenshots/act3-override.png`
+- [ ] Uncomment image line in README hero
+
+## Devpost form
+
+- [ ] **Project name:** BuildVsBuy.ai (or as entered)
+- [ ] **Tagline / short description** — from [DEVPOST.md](DEVPOST.md) elevator pitch
+- [ ] **Long description** — paste sections from [DEVPOST.md](DEVPOST.md)
+- [ ] **Live demo URL**
+- [ ] **GitHub repo URL**
+- [ ] **Video URL**
+- [ ] **Built with:** WebMCP, JavaScript, Vite (adjust as needed)
+- [ ] Confirm project stays **free and unrestricted** through 21-09-2026
+
+## Post-submit
+
+- [ ] Smoke-test live URL once more after final deploy
+- [ ] Share repo link in Devpost gallery if optional fields allow

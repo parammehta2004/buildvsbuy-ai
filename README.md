@@ -8,9 +8,12 @@
 |---|---|
 | **Live demo** | https://webmcp-playground-three.vercel.app/ |
 | **Agent recording URL** | https://webmcp-playground-three.vercel.app/?blank=1 |
+| **GitHub repo** | https://github.com/parammehta2004/buildvsbuy-ai |
 | **Challenge** | [OpenAI WebMCP Challenge](https://webmcp.devpost.com/) on Devpost |
 | **Written narrative** | [docs/DEVPOST.md](docs/DEVPOST.md) |
 | **Submission checklist** | [docs/SUBMISSION_CHECKLIST.md](docs/SUBMISSION_CHECKLIST.md) |
+
+Vercel host is still `webmcp-playground-three`; product name is **BuildVsBuy.ai**.
 
 ### Screenshot (Act 3)
 
@@ -26,7 +29,7 @@ An AI-native **build-vs-buy** decision environment centered on the **Authenticat
 
 ## Judge quick-start
 
-Open the [live demo](https://webmcp-playground-three.vercel.app/) — Auth loads by default. Use the **Try this prompt** panel in the right rail (copy buttons) or paste these into ChatGPT Desktop / Chrome 149+ with WebMCP enabled:
+Open the [live demo](https://webmcp-playground-three.vercel.app/) — Auth loads by default. Use the **Try this prompt** panel in the right rail (copy buttons) or paste these into ChatGPT Desktop / Chrome 149+ with WebMCP enabled. Without an agent, use the human quick-actions: **Run Act 2 stress**, **Pin Build (Act 3)**, **Solve for Build**, **Compare top 2**.
 
 | Act | Prompt |
 |-----|--------|
@@ -85,7 +88,9 @@ All registered imperatively via `document.modelContext.registerTool`:
 8. `solve_winning_conditions` — sensitivity: what must change for a target to win
 9. `apply_human_preference_override` — pin + score gap + Liability Ledger for honest human override
 
-Every `execute` appends to the Tool log. Human slider, context-chip, rerank, preset load, and reset actions use `runDecisionTool` with `source: human`.
+Every `execute` appends to the Tool log. Human slider, context-chip, rerank, preset load, reset, **Act 2 / Pin Build / Compare**, Export, and Import use `runDecisionTool` or the shared store with `source: human`.
+
+**Human-only (no agent):** after Auth or Scraping loads, use **Run Act 2 stress** (Scraping only — HIPAA + 50k+), **Pin Build (Act 3)** (sets Core IP, reranks, then pins Build), and **Compare top 2**. Cards show author-estimate disclaimers. **Export / Import** persist the canvas as JSON (no localStorage).
 
 ## Run
 

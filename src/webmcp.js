@@ -220,6 +220,11 @@ export function buildDecisionTools() {
             type: "boolean",
             description: "True if metrics are agent-invented until human confirms.",
           },
+          sources: {
+            type: "array",
+            items: { type: "string" },
+            description: "Short assumption/source lines shown on the option card (optional).",
+          },
         },
         required: [
           "id",
@@ -338,7 +343,7 @@ export function buildDecisionTools() {
       name: "simulate_future_scenario",
       title: "Simulate future scenario",
       description:
-        "Stress-test ranking under a future scenario without mutating baseline options or canvas cards. Prefer compliance_tier soc2/hipaa and scale_band 50k+ for Act 2 (vendor overage, compliance burden). Also supports timeline crunch. Returns projected_ranking alongside preserved baseline_ranking; the UI shows the projection as a banner but baseline cards and scores are unchanged until you rerank with new weights.",
+        "Stress-test ranking under a future scenario without mutating baseline options or canvas cards. Prefer compliance_tier soc2/hipaa and scale_band 50k+ for Act 2 (vendor overage, compliance burden). Also supports timeline crunch and team_size_change (scales self-run maintenance for build/hybrid; vendor options are unaffected). Stress is formula-derived from baseline metrics — the response includes an assumptions[] array documenting each multiplier so the math is auditable. Returns projected_ranking alongside preserved baseline_ranking; the UI shows the projection as a banner but baseline cards and scores are unchanged until you rerank with new weights.",
       inputSchema: {
         type: "object",
         properties: {
@@ -353,7 +358,7 @@ export function buildDecisionTools() {
           },
           team_size_change: {
             type: "number",
-            description: "Reserved — team size delta (not yet applied in engine v1).",
+            description: "Team size delta. Each unit scales self-run maintenance (build/hybrid) by 10%; vendor options are unaffected.",
           },
           timeline_days_available: {
             type: "number",
@@ -375,6 +380,9 @@ export function buildDecisionTools() {
           `Projected leader: ${leader}.`,
           `Baseline preserved: ${result.baseline_preserved}.`,
           result.stress_applied.length ? `Stress notes: ${result.stress_applied.join("; ")}` : "",
+          Array.isArray(result.assumptions) && result.assumptions.length
+            ? `Assumptions: ${result.assumptions.join("; ")}`
+            : "",
         ]
           .filter(Boolean)
           .join(" ");
@@ -385,7 +393,7 @@ export function buildDecisionTools() {
       name: "solve_winning_conditions",
       title: "Solve winning conditions",
       description:
-        "Sensitivity analysis: what must change for target_option_id to beat the current math leader? Returns levers, score_gap, and suggested_context_shifts. Call after ranking is computed (rerank_decision_options). For Build targets, surfaces core IP pin and weight-shift levers. Never assert what it would take for an option to win without calling this tool first; if asked, call this and report only its output.",
+        "Sensitivity analysis: what must change for target_option_id to beat the current math leader? For each of the seven criteria, computes the minimum weight (0-10, step 0.1, other weights held constant) that flips the target to rank #1 — returned as flip_levers with current_weight, required_weight, and direction. Also returns human-readable levers, score_gap, and suggested_context_shifts. Call after ranking is computed (rerank_decision_options). Never assert what it would take for an option to win without calling this tool first; if asked, call this and report only its output.",
       inputSchema: {
         type: "object",
         properties: {

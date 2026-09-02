@@ -310,6 +310,17 @@ input {
   gap: 8px;
 }
 
+.quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.quick-action {
+  font-size: 12px;
+}
+
 .context-strip::before {
   content: "Adjustable ↓";
   width: 100%;
@@ -467,6 +478,20 @@ input {
   margin: 0;
   font-size: 11px;
   color: var(--muted);
+}
+
+.sim-banner-assumptions {
+  margin: 6px 0 2px;
+  padding-left: 16px;
+  font-size: 11px;
+  color: var(--muted);
+  display: grid;
+  gap: 2px;
+}
+
+.quick-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 /* ── Cards grid ── */
@@ -668,6 +693,49 @@ input {
 .metric-row-secondary dd {
   color: var(--muted);
   font-weight: 400;
+}
+
+.card-disclaimer {
+  margin: 10px 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.card-sources {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.card-sources > summary {
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.card-sources > summary::-webkit-details-marker {
+  display: none;
+}
+
+.card-sources > summary::before {
+  content: "▸ ";
+}
+
+.card-sources[open] > summary::before {
+  content: "▾ ";
+}
+
+.card-sources ul {
+  margin: 6px 0 0;
+  padding-left: 16px;
+  display: grid;
+  gap: 3px;
+}
+
+.card-sources li {
+  line-height: 1.4;
 }
 
 /* ── Weights / sliders ── */

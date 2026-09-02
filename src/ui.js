@@ -1,7 +1,9 @@
 import {
   CRITERION_KEYS,
   CRITERION_LABELS,
+  exportDecisionState,
   getSnapshot,
+  importDecisionState,
   subscribe,
 } from "./decision.js";
 import { runDecisionTool } from "./webmcp.js";
@@ -122,6 +124,7 @@ export function renderApp(root, webmcp) {
       <div class="main-grid">
       <div class="main-column">
         ${renderContextStrip(snapshot, pulseClass, pulseBadge)}
+        ${renderQuickActions(snapshot)}
         ${renderSimulationBanner(snapshot)}
         ${snapshot.override.active ? renderOverrideBanner(snapshot) : ""}
         ${renderCardsSection(snapshot, pulseClass, pulseBadge)}
@@ -167,6 +170,24 @@ function renderHeader(snapshot, webmcp, pulseClass, pulseBadge) {
         <button type="button" class="btn btn-ghost" id="theme-toggle" aria-label="Toggle theme">
           ${currentTheme === "ink" ? "Paper theme" : "Ink theme"}
         </button>
+        ${hasDecision ? `
+        <button
+          type="button"
+          class="btn btn-ghost"
+          id="export-state"
+          title="Download the decision state + tool log as JSON"
+        >
+          Export
+        </button>` : ""}
+        <button
+          type="button"
+          class="btn btn-ghost"
+          id="import-state"
+          title="Restore a previously exported decision state from JSON"
+        >
+          Import
+        </button>
+        <input type="file" id="import-state-file" accept="application/json,.json" hidden />
         ${hasDecision ? `
         <button
           type="button"
@@ -223,11 +244,11 @@ function renderWebmcpChip(webmcp) {
     `;
   }
 
-  const label = webmcp.source === "native" ? "WebMCP native" : "WebMCP polyfill";
+  const label = webmcp.source === "native" ? "WebMCP native" : "Human mode";
   const status = hasError
     ? "registration error"
     : allRegistered
-      ? (webmcp.source === "native" ? "connected" : "no agent (open in ChatGPT Desktop / Chrome WebMCP)")
+      ? (webmcp.source === "native" ? "connected" : "agent tools available in ChatGPT Desktop / Chrome WebMCP")
       : "missing tools";
   const chipClass = hasError || !allRegistered ? "is-bad" : "is-ok";
 
@@ -291,6 +312,70 @@ function renderContextStrip(snapshot, pulseClass, pulseBadge) {
         <span class="context-chip-cycle" aria-hidden="true">↻</span>
       </button>
       <span class="context-chip is-display">${escapeHtml(timelineLabel)}</span>
+    </div>
+  `;
+}
+
+/**
+ * Human triggers for tools a judge may lack an agent for: Act 2 (simulate),
+ * Act 3 (override), Solve for Build, and Compare top 2.
+ * All route through runDecisionTool with source: human.
+ * @param {ReturnType<typeof getSnapshot>} snapshot
+ */
+function renderQuickActions(snapshot) {
+  if (snapshot.options.length === 0) {
+    return "";
+  }
+  const isScraping = snapshot.preset === "scraping";
+  const buildOption = snapshot.options.find((item) => item.type === "build");
+  const buildId = buildOption?.id ?? "";
+  const canSolve = Boolean(buildId);
+  const topTwo = snapshot.ranking.length >= 2
+    ? snapshot.ranking.slice(0, 2)
+    : snapshot.options.slice(0, 2);
+  const canCompare = topTwo.length === 2 && topTwo[0].id !== topTwo[1].id;
+  const firstId = topTwo[0]?.id ?? "";
+  const secondId = topTwo[1]?.id ?? "";
+  return `
+    <div class="quick-actions" id="quick-actions" role="group" aria-label="Quick actions (human)">
+      <button
+        type="button"
+        class="btn btn-ghost quick-action"
+        data-action="simulate-stress"
+        ${isScraping ? "" : "disabled"}
+        title="${isScraping ? "Run simulate_future_scenario with HIPAA + 50k+ (Act 2 stress)" : "Load Scraping preset first — Act 2 leader-flip is HIPAA + 50k+ on Scraping"}"
+      >
+        Run Act 2 stress (HIPAA + 50k+)
+      </button>
+      <button
+        type="button"
+        class="btn btn-ghost quick-action"
+        data-action="pin-build"
+        title="Pin Build against the math leader with a human override reason (Act 3)"
+      >
+        Pin Build (Act 3)
+      </button>
+      <button
+        type="button"
+        class="btn btn-ghost quick-action"
+        data-action="solve-build"
+        data-build-id="${escapeHtml(buildId)}"
+        ${canSolve ? "" : "disabled"}
+        title="${canSolve ? "Ask what must change for Build to win (solve_winning_conditions)" : "No Build option in this decision"}"
+      >
+        Solve for Build
+      </button>
+      <button
+        type="button"
+        class="btn btn-ghost quick-action"
+        data-action="compare-top2"
+        data-first="${escapeHtml(firstId)}"
+        data-second="${escapeHtml(secondId)}"
+        ${canCompare ? "" : "disabled"}
+        title="Compare the top two ranked options across all axes"
+      >
+        Compare top 2
+      </button>
     </div>
   `;
 }
@@ -426,6 +511,14 @@ function renderOptionCard(option, snapshot, ranked) {
           <dd>${escapeHtml(formatMoney(metrics.labor_estimate_display ?? (option.prototype_time_hours + option.monthly_maintenance_hours * 60) * 75))}</dd>
         </div>
       </dl>
+      <p class="card-disclaimer">Author estimates for demo — not vendor quotes or audited TCO.</p>
+      ${
+        Array.isArray(option.sources) && option.sources.length > 0
+          ? `<details class="card-sources"><summary>Assumptions (${option.sources.length})</summary><ul>${option.sources
+              .map((src) => `<li>${escapeHtml(src)}</li>`)
+              .join("")}</ul></details>`
+          : ""
+      }
     </article>
   `;
 }
@@ -714,10 +807,18 @@ function renderSimulationBanner(snapshot) {
   }
   const sim = snapshot.lastSimulation;
   const leader = sim.leader ? `${escapeHtml(sim.leader.name)} · ${escapeHtml(String(sim.leader.displayScore.toFixed(1)))}` : "—";
+  const assumptionLines = Array.isArray(sim.assumptions) ? sim.assumptions.slice(0, 4) : [];
   return `
     <section class="sim-banner" aria-live="polite">
       <p class="sim-banner-title">Projected stress: <strong>${escapeHtml(sim.scenario_name)}</strong></p>
       <p class="sim-banner-leader">Projected leader: ${leader}</p>
+      ${
+        assumptionLines.length
+          ? `<ul class="sim-banner-assumptions">${assumptionLines
+              .map((line) => `<li>${escapeHtml(line)}</li>`)
+              .join("")}</ul>`
+          : ""
+      }
       <p class="sim-banner-note">Projection only — baseline cards and scores are unchanged. Rerank does not apply stress; use simulate_future_scenario.</p>
     </section>
   `;
@@ -808,6 +909,45 @@ function bindEvents(root, snapshot) {
     }
   });
 
+  root.querySelector("#export-state")?.addEventListener("click", () => {
+    try {
+      const payload = exportDecisionState();
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `buildvsbuy-export-${stamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : String(error));
+    }
+  });
+
+  const importInput = root.querySelector("#import-state-file");
+  root.querySelector("#import-state")?.addEventListener("click", () => {
+    importInput?.click();
+  });
+  importInput?.addEventListener("change", async (event) => {
+    const target = /** @type {HTMLInputElement} */ (event.currentTarget);
+    const file = target.files?.[0];
+    if (!file) {
+      return;
+    }
+    try {
+      const text = await file.text();
+      const payload = JSON.parse(text);
+      importDecisionState(payload);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : String(error));
+    } finally {
+      target.value = "";
+    }
+  });
+
   for (const button of root.querySelectorAll(".prompt-copy-btn")) {
     button.addEventListener("click", async () => {
       const index = Number(button.getAttribute("data-prompt-index"));
@@ -867,6 +1007,75 @@ function bindEvents(root, snapshot) {
       window.alert(error instanceof Error ? error.message : String(error));
     }
   });
+
+  for (const button of root.querySelectorAll(".quick-action[data-action]")) {
+    button.addEventListener("click", async () => {
+      const action = button.getAttribute("data-action");
+      try {
+        if (action === "simulate-stress") {
+          const snap = getSnapshot();
+          if (snap.preset !== "scraping") {
+            window.alert("Load the Scraping preset first — Act 2 is the HIPAA + 50k+ leader-flip on Scraping.");
+            return;
+          }
+          await runDecisionTool(
+            "simulate_future_scenario",
+            { scenario_name: "HIPAA at 50k+ (human)", scale_band: "50k+", compliance_tier: "hipaa" },
+            { source: "human" },
+          );
+        } else if (action === "pin-build") {
+          const reason = window.prompt(
+            "Override reason (required) — why pin Build against the math leader?",
+            "Auth is core IP — we must own tenant isolation.",
+          );
+          if (!reason || !reason.trim()) {
+            return;
+          }
+          // Engine only pins Build when is_core_ip is true. Set it, rerank,
+          // then override so the button matches its label.
+          const snap = getSnapshot();
+          if (!snap.isCoreIp) {
+            await runDecisionTool("set_decision_context", { is_core_ip: true }, { source: "human" });
+          }
+          await runDecisionTool("rerank_decision_options", {}, { source: "human" });
+          await runDecisionTool(
+            "apply_human_preference_override",
+            { pin_recommendation: true, override_reason: reason.trim() },
+            { source: "human" },
+          );
+        } else if (action === "solve-build") {
+          const buildId = button.getAttribute("data-build-id") ?? "";
+          if (!buildId) {
+            return;
+          }
+          // Engine refuses solve on stale ranks. Rerank first so a slider
+          // change cannot turn this button into an alert.
+          const snap = getSnapshot();
+          if (!snap.rankingCurrent) {
+            await runDecisionTool("rerank_decision_options", {}, { source: "human" });
+          }
+          await runDecisionTool(
+            "solve_winning_conditions",
+            { target_option_id: buildId },
+            { source: "human" },
+          );
+        } else if (action === "compare-top2") {
+          const firstId = button.getAttribute("data-first") ?? "";
+          const secondId = button.getAttribute("data-second") ?? "";
+          if (!firstId || !secondId || firstId === secondId) {
+            return;
+          }
+          await runDecisionTool(
+            "compare_decision_options",
+            { first_option_id: firstId, second_option_id: secondId },
+            { source: "human" },
+          );
+        }
+      } catch (error) {
+        window.alert(error instanceof Error ? error.message : String(error));
+      }
+    });
+  }
 
   for (const button of root.querySelectorAll("[data-context]")) {
     button.addEventListener("click", async () => {

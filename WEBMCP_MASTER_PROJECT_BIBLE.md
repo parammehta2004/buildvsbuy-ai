@@ -245,7 +245,8 @@ Display scores to **1 decimal**. Tool copy: estimates, not accounting.
 * **Scraping HIPAA + 50k+ (LOCKED):** projected leader is `hybrid`. Do not retune `projectOption` in a way that returns `buy` (or any non-hybrid) under that stress; `scripts/smoke-decision.mjs` asserts `projectedLeader === "hybrid"`.
 * **Also supported:** budget contraction, timeline crunch.
 * **"Yes, Build It" invariants** (surfaced in tool text): domain uniqueness; `is_core_ip`; parasitic SaaS scale; sovereignty/on-prem.
-* **Override:** `apply_human_preference_override` supports **pin + score gap + Liability Ledger** (`liabilities[]`) so Act 3 is honest on camera.
+* **Override:** `apply_human_preference_override` supports **pin + score gap + Liability Ledger** (`liabilities[]`) so Act 3 is honest on camera. Liability rows are computed from the pinned option's live metrics + session context (not vendor canned copy).
+* **Human Solve:** the **Solve for Build** quick-action calls `runDecisionTool("solve_winning_conditions", { target_option_id: buildId }, { source: "human" })` — same execute path as the agent.
 
 ---
 

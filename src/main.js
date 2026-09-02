@@ -1,5 +1,4 @@
-import { loadDefaultDemo, loadScrapingDemo } from "./decision.js";
-import { bindApp, setCurrentPreset } from "./ui.js";
+import { bindApp, loadPresetViaTools, setCurrentPreset } from "./ui.js";
 import { installDocumentModelContext } from "./polyfill.js";
 import { getRegisteredTools, registerDecisionTools } from "./webmcp.js";
 import "./style.css";
@@ -39,14 +38,12 @@ async function boot() {
   const bootPreset = params.get("preset");
 
   if (!wantBlank) {
-    if (bootPreset === "scraping") {
-      setCurrentPreset("scraping");
-      loadScrapingDemo();
-    } else {
-      // default (no params) OR ?preset=auth -> Auth demo
-      setCurrentPreset("auth");
-      loadDefaultDemo();
-    }
+    const preset = bootPreset === "scraping" ? "scraping" : "auth";
+    setCurrentPreset(preset);
+    // Boot through the same WebMCP execute path humans use so the tool log
+    // records create_decision -> set_decision_context -> rerank (source: human).
+    // Judges opening "/" see a populated log instead of ranked cards with no proof.
+    await loadPresetViaTools(preset);
   }
   // wantBlank === true -> leave empty canvas for agent video recording
 

@@ -15,7 +15,10 @@ Use this list before clicking Submit on Devpost.
 - [ ] **`/?preset=scraping`** shows Scraping cards (Buy #1 under default weights)
 - [ ] **Try-this-prompt** panel — all three Copy buttons work (paste text matches)
 - [ ] **Human slider → Rerank** — stale banner, then updated ranks; tool log shows `source: human`
-- [ ] **Act 2 on Scraping** — HIPAA + 50k+ simulation banner shows projected leader **not** Buy
+- [ ] **Human Act 2** (Scraping loaded) — **Run Act 2 stress** shows HIPAA+50k+ banner; projected leader not Buy; assumptions listed
+- [ ] **Human Act 3** — **Pin Build** sets Core IP, pins Build (not the math leader), ledger populates
+- [ ] **Solve for Build** — quick-action runs `solve_winning_conditions` for the Build option; insight rail updates
+- [ ] **Export / Import** — download JSON, refresh, import; ranks + override survive
 - [ ] **Act 3** — override banner + Liability ledger populate after pin
 
 ## Repository
@@ -24,10 +27,10 @@ Use this list before clicking Submit on Devpost.
 - [ ] **MIT** license visible (repo About + `LICENSE` file)
 - [ ] WebMCP `registerTool` usage is obvious in repo (`src/webmcp.js`)
 - [ ] README hero has live URL, `?blank=1`, judge quick-start
-- [ ] `npm run lint` — exit 0
-- [ ] `npm run build` — exit 0
-- [ ] `node scripts/smoke-decision.mjs` — exit 0
-- [ ] `node scripts/smoke-webmcp.mjs` — exit 0
+- [x] `npm run lint` — exit 0
+- [x] `npm run build` — exit 0
+- [x] `node scripts/smoke-decision.mjs` — exit 0
+- [x] `node scripts/smoke-webmcp.mjs` — exit 0
 
 ## Video (record last)
 

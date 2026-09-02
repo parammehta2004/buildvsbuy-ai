@@ -10,7 +10,8 @@ Copy-ready text for the [OpenAI WebMCP Challenge](https://webmcp.devpost.com/) s
 
 **Live demo:** https://webmcp-playground-three.vercel.app/  
 **Agent recording URL:** https://webmcp-playground-three.vercel.app/?blank=1  
-**Repo:** *(your public GitHub URL)*  
+**Repo:** https://github.com/parammehta2004/buildvsbuy-ai  
+
 **Video:** *(YouTube link after recording)*
 
 ---
@@ -47,8 +48,8 @@ The demo is designed for **collaboration**, not replacement:
 | Moment | Human | Agent |
 |--------|-------|-------|
 | Act 1 | Drag TTP slider, click Rerank | Same via `set_priority_weight` + `rerank_decision_options` |
-| Act 2 | Switch to Scraping preset | `simulate_future_scenario` HIPAA + 50k+ — projected leader flips off Buy |
-| Act 3 | Toggle core IP, or agent sets it | `apply_human_preference_override` — pin Build, score gap, liabilities |
+| Act 2 | Switch to Scraping, click **Run Act 2 stress** | `simulate_future_scenario` HIPAA + 50k+ — projected leader flips off Buy |
+| Act 3 | Click **Pin Build (Act 3)** (sets Core IP, then pins) | `apply_human_preference_override` — pin Build, score gap, liabilities |
 
 Human UI actions route through `runDecisionTool(..., { source: "human" })` — the **same execute bodies** as the agent path. One protocol, two actors.
 

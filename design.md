@@ -16,7 +16,7 @@ This document is the strict blueprint for implementing Slice C (UI + Themes). It
 - `src/polyfill.js`
 
 **Anti-Patterns (NEVER DO THESE):**
-- Do not use `localStorage` (theme and state reset on refresh).
+- Do not use `localStorage` (theme and state reset on refresh). Persistence is via JSON export/import only — see `exportDecisionState` / `importDecisionState` in `src/decision.js` and the header Export/Import buttons.
 - Do not invent scores, ranks, or metrics to match the mockup PNGs. Use real data from `getSnapshot()`.
 - Do not add "eyebrow" marketing pills or generic AI UI gradients/neon.
 - Do not leave property-lab leftovers (`price`, `commute`, `space`).
@@ -80,6 +80,9 @@ The UI must subscribe to the `decision.js` store and re-render on `notify()`.
 - **Cards:** The pinned card gets an "Override" badge. The math leader keeps an "Objective #1" badge.
 - **Ledger:** Populate with `liabilities[]` from the snapshot.
 - **Banner:** Show "Pinned: [Name] · Math leader: [Name] · Gap: [scoreGap] pts · Reason: [reason]".
+
+### 4.4 Human quick-actions
+- **Solve for Build**, **Pin Build**, Act 2 stress, and Compare top 2 all call `runDecisionTool(..., { source: "human" })` — same execute path as the agent (no parallel store API).
 
 ---
 

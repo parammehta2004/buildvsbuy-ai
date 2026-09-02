@@ -122,15 +122,15 @@ export function renderApp(root, webmcp) {
     <div class="app">
       ${renderHeader(snapshot, webmcp, pulseClass, pulseBadge)}
       <div class="main-grid">
-      <div class="main-column">
+      <main class="main-column" id="main-content">
         ${renderContextStrip(snapshot, pulseClass, pulseBadge)}
         ${renderQuickActions(snapshot)}
         ${renderSimulationBanner(snapshot)}
         ${snapshot.override.active ? renderOverrideBanner(snapshot) : ""}
         ${renderCardsSection(snapshot, pulseClass, pulseBadge)}
         ${renderWeightsSection(snapshot, pulseClass, pulseBadge)}
-      </div>
-        <aside class="right-rail">
+      </main>
+        <aside class="right-rail" aria-label="Agent prompts and audit trail">
           ${renderPromptsPanel(snapshot)}
           ${renderToolLog(snapshot)}
           ${renderAgentInsight(snapshot)}
@@ -161,7 +161,7 @@ function renderHeader(snapshot, webmcp, pulseClass, pulseBadge) {
       <div class="header-brand">
         <p class="brand">BuildVsBuy.ai</p>
         ${renderPresetSwitcher(hasDecision, pulseClass, pulseBadge)}
-        ${hasDecision ? `<h1 class="decision-title">${escapeHtml(title)}</h1>` : ""}
+        ${hasDecision ? `<h1 class="decision-title">${escapeHtml(title)}</h1>` : `<h1 class="visually-hidden">BuildVsBuy.ai — WebMCP decision canvas</h1>`}
         ${hasDecision ? `<p class="header-tagline">Demo scenario — structured estimates</p>` : ""}
         <p class="problem-statement">${escapeHtml(problem)}</p>
       </div>
@@ -175,6 +175,7 @@ function renderHeader(snapshot, webmcp, pulseClass, pulseBadge) {
           type="button"
           class="btn btn-ghost"
           id="export-state"
+          aria-label="Export decision state and tool log as JSON"
           title="Download the decision state + tool log as JSON"
         >
           Export
@@ -183,6 +184,7 @@ function renderHeader(snapshot, webmcp, pulseClass, pulseBadge) {
           type="button"
           class="btn btn-ghost"
           id="import-state"
+          aria-label="Import decision state from JSON file"
           title="Restore a previously exported decision state from JSON"
         >
           Import
@@ -193,6 +195,7 @@ function renderHeader(snapshot, webmcp, pulseClass, pulseBadge) {
           type="button"
           class="btn btn-ghost"
           id="load-auth-preset"
+          aria-label="${escapeHtml(resetTitle)}"
           title="${escapeHtml(resetTitle)}"
         >
           Reset demo
@@ -236,7 +239,7 @@ function renderWebmcpChip(webmcp) {
 
   if (webmcp.source === "unavailable") {
     return `
-      <span class="webmcp-chip is-bad" title="${escapeHtml(webmcp.error || "WebMCP unavailable")}">
+      <span class="webmcp-chip is-bad" role="status" aria-live="polite" title="${escapeHtml(webmcp.error || "WebMCP unavailable")}">
         <span class="webmcp-dot" aria-hidden="true"></span>
         WebMCP off
       </span>
@@ -253,7 +256,7 @@ function renderWebmcpChip(webmcp) {
   const chipClass = hasError || !allRegistered ? "is-bad" : "is-ok";
 
   return `
-    <span class="webmcp-chip ${chipClass}">
+    <span class="webmcp-chip ${chipClass}" role="status" aria-live="polite">
       <span class="webmcp-dot" aria-hidden="true"></span>
       ${label} · ${escapeHtml(status)}
     </span>
@@ -343,6 +346,7 @@ function renderQuickActions(snapshot) {
         class="btn btn-ghost quick-action"
         data-action="simulate-stress"
         ${isScraping ? "" : "disabled"}
+        aria-label="${isScraping ? "Run Act 2 stress test: simulate HIPAA compliance at 50k+ users" : "Run Act 2 stress test — load Scraping preset first"}"
         title="${isScraping ? "Run simulate_future_scenario with HIPAA + 50k+ (Act 2 stress)" : "Load Scraping preset first — Act 2 leader-flip is HIPAA + 50k+ on Scraping"}"
       >
         Run Act 2 stress (HIPAA + 50k+)
@@ -351,6 +355,7 @@ function renderQuickActions(snapshot) {
         type="button"
         class="btn btn-ghost quick-action"
         data-action="pin-build"
+        aria-label="Pin Build option with human override (Act 3)"
         title="Pin Build against the math leader with a human override reason (Act 3)"
       >
         Pin Build (Act 3)
@@ -361,6 +366,7 @@ function renderQuickActions(snapshot) {
         data-action="solve-build"
         data-build-id="${escapeHtml(buildId)}"
         ${canSolve ? "" : "disabled"}
+        aria-label="${canSolve ? "Solve winning conditions for Build option" : "Solve for Build unavailable — no Build option in this decision"}"
         title="${canSolve ? "Ask what must change for Build to win (solve_winning_conditions)" : "No Build option in this decision"}"
       >
         Solve for Build
@@ -372,6 +378,7 @@ function renderQuickActions(snapshot) {
         data-first="${escapeHtml(firstId)}"
         data-second="${escapeHtml(secondId)}"
         ${canCompare ? "" : "disabled"}
+        aria-label="${canCompare ? "Compare top two ranked options across all axes" : "Compare top 2 unavailable — need two distinct ranked options"}"
         title="Compare the top two ranked options across all axes"
       >
         Compare top 2

@@ -52,6 +52,37 @@ body {
   min-height: 100vh;
 }
 
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 16px;
+  z-index: 1000;
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: 16px;
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   html.theme-transition,
   html.theme-transition *,
@@ -1260,6 +1291,19 @@ details.tool-log-entry summary::-webkit-details-marker {
   .is-pulsed {
     box-shadow: 0 0 0 2px var(--accent);
     animation: none;
+  }
+
+  html.theme-transition,
+  html.theme-transition *,
+  html.theme-transition *::before,
+  html.theme-transition *::after {
+    transition: none !important;
+  }
+
+  .preset-segment,
+  .btn,
+  .context-chip {
+    transition: none;
   }
 }
 

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <rect width="1200" height="630" fill="#0a0f0c"/>
+  <rect x="48" y="48" width="1104" height="534" rx="24" stroke="#2a3530" stroke-width="2"/>
+  <text x="96" y="180" fill="#3ecf6e" font-family="Segoe UI, system-ui, sans-serif" font-size="28" font-weight="600" letter-spacing="0.12em">WEBMCP DECISION CANVAS</text>
+  <text x="96" y="290" fill="#e8ece9" font-family="Segoe UI, system-ui, sans-serif" font-size="72" font-weight="700" letter-spacing="-0.02em">BuildVsBuy.ai</text>
+  <text x="96" y="360" fill="#8a9690" font-family="Segoe UI, system-ui, sans-serif" font-size="32" font-weight="400">Humans + agents co-manipulate one structured build-vs-buy model</text>
+  <text x="96" y="520" fill="#3ecf6e" font-family="Segoe UI, system-ui, sans-serif" font-size="24" font-weight="600">9 typed tools · shared tool log · Auth &amp; Scraping presets</text>
+  <circle cx="1020" cy="160" r="56" fill="#141c18" stroke="#3ecf6e" stroke-width="3"/>
+  <path d="M1020 120v80" stroke="#3ecf6e" stroke-width="4" stroke-linecap="round"/>
+  <path d="M980 150h80" stroke="#3ecf6e" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="1000" cy="190" r="10" fill="#3ecf6e"/>
+  <circle cx="1040" cy="190" r="10" fill="#3ecf6e"/>
+</svg>

@@ -2,7 +2,7 @@
 **Document:** `CONVO_HANDOFF.md`  
 **Generated At:** 01-09-2026  
 **Calendar note:** Deadline = **03-09-2026 @ 1:00 PM PT**.  
-**Status:** Fronts 1–4 LOCKED · **Slices A–G SHIPPED** · **Tier 2 SHIPPED** · live URL https://webmcp-playground-three.vercel.app · GitHub↔Vercel connected · **next = Slice F** (video + Devpost)
+**Status:** Fronts 1–4 LOCKED · **Slices A–G SHIPPED** · **Tier 2 SHIPPED** · live URL https://buildvsbuy-ai.vercel.app · GitHub↔Vercel connected · **next = Slice F** (video + Devpost)
 
 ---
 
@@ -117,7 +117,7 @@
 ### Slice G — SHIPPED (01-09-2026)
 * **G1:** Human tool log (`source: human|agent`), favicon + OG meta, copy pass (Tool log rename, disclaimer).
 * **G2:** `SCRAPING_PRESET_OPTIONS` + `loadScrapingDemo()`, header `[ Auth | Scraping ]` segmented switcher, `currentPreset` reset routing, WebMCP `create_decision` scraping enum live, smoke-decision scraping asserts (neutral **`buy > hybrid > build > adopt`** — distinct from Auth), README scraping row, Bible §7/§8.2/§11 sync.
-* **Live:** https://webmcp-playground-three.vercel.app (Vercel auto-deploy from `main`).
+* **Live:** https://buildvsbuy-ai.vercel.app (Vercel auto-deploy from `main`).
 
 ### Tier 2 — SHIPPED (01-09-2026)
 * **T2-1:** Expandable tool-log rows (`<details>`) — input JSON + ranking snapshot + stale/current badge; expanded state preserved across redraws.
@@ -137,9 +137,9 @@
 ---
 
 ## 8. Next chat opening prompt (suggested)
-> Read `CONVO_HANDOFF.md` + Bible §6–8 + §11. Fronts 1–4 locked. Slices A–G + Tier 2 SHIPPED. Live URL: https://webmcp-playground-three.vercel.app. Next: Slice F video + Devpost. Do not re-open product design or UI layout.
+> Read `CONVO_HANDOFF.md` + Bible §6–8 + §11. Fronts 1–4 locked. Slices A–G + Tier 2 SHIPPED. Live URL: https://buildvsbuy-ai.vercel.app. Next: Slice F video + Devpost. Do not re-open product design or UI layout.
 
 ---
 
 ## 9. Docs sync note
-Handoff updated 01-09-2026 after Slice G (Scraping preset + preset switcher). Product locks unchanged. **Public repo:** https://github.com/parammehta2004/buildvsbuy-ai. **Live:** https://webmcp-playground-three.vercel.app.
+Handoff updated 01-09-2026 after Slice G (Scraping preset + preset switcher). Product locks unchanged. **Public repo:** https://github.com/parammehta2004/buildvsbuy-ai. **Live:** https://buildvsbuy-ai.vercel.app.

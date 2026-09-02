@@ -8,8 +8,8 @@ Copy-ready text for the [OpenAI WebMCP Challenge](https://webmcp.devpost.com/) s
 
 **BuildVsBuy.ai** is a browser-native build-vs-buy decision canvas where humans and WebMCP agents co-manipulate one structured decision model — weights, stress scenarios, and honest human overrides — with every action logged on screen.
 
-**Live demo:** https://webmcp-playground-three.vercel.app/  
-**Agent recording URL:** https://webmcp-playground-three.vercel.app/?blank=1  
+**Live demo:** https://buildvsbuy-ai.vercel.app/  
+**Agent recording URL:** https://buildvsbuy-ai.vercel.app/?blank=1  
 **Repo:** https://github.com/parammehta2004/buildvsbuy-ai  
 
 **Video:** *(YouTube link after recording)*

@@ -9,7 +9,7 @@ Use this list before clicking Submit on Devpost.
 
 ## Live product
 
-- [ ] **Live URL** loads in ChatGPT in-app browser: https://webmcp-playground-three.vercel.app/
+- [ ] **Live URL** loads in ChatGPT in-app browser: https://buildvsbuy-ai.vercel.app/
 - [ ] **`/` (no params)** shows 4 Auth cards, ranked, Winner badge visible
 - [ ] **`/?blank=1`** shows empty canvas + Load Auth/Scraping CTAs + copyable Try-this-prompt panel
 - [ ] **`/?preset=scraping`** shows Scraping cards (Buy #1 under default weights)
@@ -34,7 +34,7 @@ Use this list before clicking Submit on Devpost.
 
 ## Video (record last)
 
-- [ ] Recorded from https://webmcp-playground-three.vercel.app/?blank=1
+- [ ] Recorded from https://buildvsbuy-ai.vercel.app/?blank=1
 - [ ] Environment: ChatGPT Desktop in-app browser **or** Chrome 149+ with `#enable-webmcp-testing`
 - [ ] **Under 3 minutes**, all three acts visible
 - [ ] Tool log fills entry-by-entry during recording (no invented ranks)

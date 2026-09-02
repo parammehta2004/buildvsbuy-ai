@@ -6,14 +6,12 @@
 
 | | |
 |---|---|
-| **Live demo** | https://webmcp-playground-three.vercel.app/ |
-| **Agent recording URL** | https://webmcp-playground-three.vercel.app/?blank=1 |
+| **Live demo** | https://buildvsbuy-ai.vercel.app/ |
+| **Agent recording URL** | https://buildvsbuy-ai.vercel.app/?blank=1 |
 | **GitHub repo** | https://github.com/parammehta2004/buildvsbuy-ai |
 | **Challenge** | [OpenAI WebMCP Challenge](https://webmcp.devpost.com/) on Devpost |
 | **Written narrative** | [docs/DEVPOST.md](docs/DEVPOST.md) |
 | **Submission checklist** | [docs/SUBMISSION_CHECKLIST.md](docs/SUBMISSION_CHECKLIST.md) |
-
-Vercel host is still `webmcp-playground-three`; product name is **BuildVsBuy.ai**.
 
 ### Screenshot (Act 3)
 
@@ -29,7 +27,7 @@ An AI-native **build-vs-buy** decision environment centered on the **Authenticat
 
 ## Judge quick-start
 
-Open the [live demo](https://webmcp-playground-three.vercel.app/) — Auth loads by default. Use the **Try this prompt** panel in the right rail (copy buttons) or paste these into ChatGPT Desktop / Chrome 149+ with WebMCP enabled. Without an agent, use the human quick-actions: **Run Act 2 stress**, **Pin Build (Act 3)**, **Solve for Build**, **Compare top 2**.
+Open the [live demo](https://buildvsbuy-ai.vercel.app/) — Auth loads by default. Use the **Try this prompt** panel in the right rail (copy buttons) or paste these into ChatGPT Desktop / Chrome 149+ with WebMCP enabled. Without an agent, use the human quick-actions: **Run Act 2 stress**, **Pin Build (Act 3)**, **Solve for Build**, **Compare top 2**.
 
 | Act | Prompt |
 |-----|--------|
@@ -39,7 +37,7 @@ Open the [live demo](https://webmcp-playground-three.vercel.app/) — Auth loads
 
 **Act 2 alternate wording:** Switch to scraping preset, then stress-test for HIPAA compliance at 50k+ users.
 
-For a clean agent recording canvas, open [`?blank=1`](https://webmcp-playground-three.vercel.app/?blank=1) — prompts remain copyable in the right rail.
+For a clean agent recording canvas, open [`?blank=1`](https://buildvsbuy-ai.vercel.app/?blank=1) — prompts remain copyable in the right rail.
 
 ## Why WebMCP is a native fit
 
@@ -101,7 +99,7 @@ npm install
 npm run dev
 ```
 
-Open the printed localhost URL (Vite defaults to `http://localhost:5173`) or the [live demo](https://webmcp-playground-three.vercel.app/). WebMCP needs a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts): localhost and HTTPS count.
+Open the printed localhost URL (Vite defaults to `http://localhost:5173`) or the [live demo](https://buildvsbuy-ai.vercel.app/). WebMCP needs a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts): localhost and HTTPS count.
 
 ```bash
 npm run build
@@ -129,7 +127,7 @@ Record **after** Slices 1–6 are deployed. Target **under 3 minutes**, public o
 | Step | Detail |
 |------|--------|
 | **Environment** | ChatGPT Desktop in-app browser **or** Chrome 149+ with `#enable-webmcp-testing` |
-| **URL** | https://webmcp-playground-three.vercel.app/?blank=1 |
+| **URL** | https://buildvsbuy-ai.vercel.app/?blank=1 |
 | **Act 1** | Agent `create_decision` (auth) → `set_priority_weight` TTP=9 → `rerank_decision_options` (Build drops) |
 | **Act 2** | `create_decision` (scraping) → `simulate_future_scenario` HIPAA + 50k+ (projected leader flips off Buy) |
 | **Act 3** | `set_decision_context` core_ip=true → `apply_human_preference_override` (pin Build, score gap, liabilities) |

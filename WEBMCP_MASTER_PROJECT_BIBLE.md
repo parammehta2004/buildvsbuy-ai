@@ -493,7 +493,7 @@ Target Video Length: **2 minutes 45 seconds** (Safe within < 3:00 rule).
 
 ### 11.1 Rebaseline schedule (targets, not rigid contracts)
 
-**As of 01-09-2026:** Slices A–G shipped. Live URL: https://webmcp-playground-three.vercel.app. `npm run lint` + `npm run build` + `smoke-decision` + `smoke-webmcp` GREEN. Slice G added human tool log, favicon/meta, Scraping preset + header switcher. Next: Slice F (video + Devpost). Live slice-by-slice status in `CONVO_HANDOFF.md`.
+**As of 01-09-2026:** Slices A–G shipped. Live URL: https://buildvsbuy-ai.vercel.app. `npm run lint` + `npm run build` + `smoke-decision` + `smoke-webmcp` GREEN. Slice G added human tool log, favicon/meta, Scraping preset + header switcher. Next: Slice F (video + Devpost). Live slice-by-slice status in `CONVO_HANDOFF.md`.
 
 | Window | Target work | Done when |
 |---|---|---|

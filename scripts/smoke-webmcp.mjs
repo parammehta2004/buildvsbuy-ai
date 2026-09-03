@@ -64,24 +64,32 @@ async function runFlow() {
     `Preset options must keep locked relative order adopt>hybrid>build>buy, got: ${neutralIds.join(", ")}`,
   );
 
-  console.log("Smoke: 3 set_priority_weight TTP=9");
+  console.log("Smoke: 3 set_priority_weight TTP=9 (auto-reranks)");
   const weightResult = await tools.set_priority_weight.execute({
     criterion: "time_to_prototype",
     weight: 9,
   });
   assert(weightResult.content[0].text.includes("Changed"), "Weight change should report changed");
+  assert(weightResult.content[0].text.includes("Auto-reranked"), "Weight change must auto-rerank");
   snap = getSnapshot();
-  assert(snap.rankingCurrent === false, "Weight change should mark ranking stale");
-
-  console.log("Smoke: 4 rerank_decision_options (clean preset, speed-biased)");
-  await tools.rerank_decision_options.execute({});
-  snap = getSnapshot();
+  assert(snap.rankingCurrent === true, "Auto-rerank after weight must leave ranking current");
   const speedIds = rankIds(snap);
-  console.log("Speed-biased ranking:", speedIds.join(" > "));
+  console.log("Speed-biased ranking (auto):", speedIds.join(" > "));
   assert(
     speedIds.indexOf("build") > speedIds.indexOf("buy"),
     `Speed-bias (TTP=9) must drop build below buy — the vibe-trap crossover, got: ${speedIds.join(", ")}`,
   );
+  assert(
+    snap.toolLog.some(
+      (entry) => entry.tool === "rerank_decision_options" && /Auto-reranked/.test(entry.summary),
+    ),
+    "Tool log must show auto-rerank after weight change",
+  );
+
+  console.log("Smoke: 4 explicit rerank still idempotent");
+  await tools.rerank_decision_options.execute({});
+  snap = getSnapshot();
+  assert(rankIds(snap).join(">") === speedIds.join(">"), "Explicit rerank should keep speed-biased order");
 
   console.log("Smoke: 5 add_option REFUSED on seeded auth (Prompt 2 invent path)");
   const addRefuseText = (
@@ -256,7 +264,11 @@ async function runFlow() {
   }
 
   const rerankEntries = toolLog.filter((entry) => entry.tool === "rerank_decision_options");
-  assert(rerankEntries.length === 2, "rerank should appear twice in tool log");
+  assert(rerankEntries.length >= 2, `rerank should appear at least twice in tool log, got ${rerankEntries.length}`);
+  assert(
+    toolLog.some((entry) => entry.tool === "rerank_decision_options" && /Auto-reranked/.test(entry.summary)),
+    "Restored-auth weight write must leave an auto-rerank log entry",
+  );
   assert(
     rerankEntries.every((entry) => entry.rankingCurrent === true),
     "rerank log entries should have rankingCurrent true",

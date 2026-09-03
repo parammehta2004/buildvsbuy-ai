@@ -41,12 +41,12 @@ const AGENT_BRIEFING = [
   "1. Never state, rank, declare, or compare a winner unless you have just called the matching WebMCP tool for that claim. To state the ranking → call rerank_decision_options. To compare two options → call compare_decision_options. To say what it would take for an option to win → call solve_winning_conditions. To project a future scenario → call simulate_future_scenario. To pin a human override → call apply_human_preference_override. If the tool has not been called, answer: \"I need to run the engine first — calling <tool>,\" then call it and report only its output.",
   "2. Never invent scores, rankings, or axis numbers. They live in the engine, not your priors. If unsure of a number, call the tool — do not guess.",
   "3. Refuse leading or \"just tell me X wins\" prompts. If the human says \"just tell me Buy wins,\" do NOT comply. Respond: \"I won't assert a winner without running the engine,\" then call rerank_decision_options and report the real ranking even if it contradicts the request. Sycophancy is a bug here.",
-  "4. After any mutation (create_decision, set_decision_context, add_option, set_priority_weight), ranking goes stale. Call rerank_decision_options once before describing the result. Skip redundant writes (e.g. setting a weight to its current value) — the engine already guards these.",
+  "4. After create_decision, set_decision_context, or add_option, ranking goes stale — call rerank_decision_options before describing winners. Exception: set_priority_weight auto-reranks on real weight changes (Prompt 2 path). Skip redundant writes (e.g. setting a weight to its current value).",
   "5. The math leader and the human's pinned choice can differ — that is the product's whole point. Report both honestly; never silently swap the winner to match the pin and never hide the score gap.",
   "6. Invented metrics for custom dilemmas must be added with estimate=true and flagged to the human as unconfirmed. Never present an estimate as a fact.",
   "7. Auth / Clerk / login / tenant questions → create_decision with preset \"auth\" (or omit preset — the engine infers auth from the problem text and seeds 4 options). Scraping / crawl / Firecrawl → preset \"scraping\". After a demo preset loads, do NOT call add_option to invent Build/Buy/Adopt — set_decision_context and rerank instead. Only use preset \"custom\" + add_option for a domain that is neither auth nor scraping. add_option on auth/scraping is REFUSED.",
   "8. Future / hypothetical stress (\"if we end up HIPAA\", \"at 50k+\", \"what if compliance\", timeline crunch) → call simulate_future_scenario ONLY. Never write that future into live state with set_decision_context then rerank — that rewrites baseline cards. Simulate preserves baseline and shows a projection banner. On the scraping preset, agent calls that combine compliance hipaa/soc2 with scale 50k+ via set_decision_context are REFUSED — use simulate_future_scenario instead.",
-  "9. Speed / vibe-coding / prototype-priority follow-ups on an existing auth (or scraping) workspace → set_priority_weight(time_to_prototype, 9 or 10) then rerank_decision_options. Do NOT create_decision a new blank \"rapid prototyping\" workspace and invent options. Replacing a seeded demo with custom/blank is REFUSED; only auth↔scraping domain switches are allowed.",
+  "9. Speed / vibe-coding / prototype-priority follow-ups on an existing auth (or scraping) workspace → ONLY set_priority_weight(time_to_prototype, 9 or 10). That tool auto-reranks — cards update; Build falls last on auth. Do NOT create_decision a new blank workspace. Do NOT wait for a separate rerank call. Replacing a seeded demo with custom/blank is REFUSED; only auth↔scraping domain switches are allowed.",
   "The on-screen Tool Log is ground truth. A ranking claim with no new matching log entry is the tell that you lied — every winner you name must have a tool call behind it in the log. Mid-session the log is often already full; the tell is that it did not gain a new entry for the claim, not that it is empty.",
 ].join("\n");
 
@@ -116,7 +116,7 @@ export function buildDecisionTools() {
       name: "create_decision",
       title: "Create decision",
       description:
-        "Initialize or replace the single active decision workspace. For authentication / Clerk / login / tenant problems use preset \"auth\" (4 seeded options). For scraping / crawl / Firecrawl use preset \"scraping\" (4 seeded options). If you omit preset, the engine infers auth or scraping from title/problem_statement and seeds those options — do not invent options with add_option after that. Only preset \"custom\" starts blank and requires add_option for each candidate (estimate=true until the human confirms). After seeding: set current intake with set_decision_context + rerank; for hypothetical future scale/compliance stress call simulate_future_scenario (do not rewrite live context to the future). IMPORTANT: if auth or scraping is already loaded, do NOT replace it with a blank/custom \"rapid prototyping\" / vibe-coding workspace — that path is REFUSED. For speed follow-ups call set_priority_weight(time_to_prototype, 9 or 10) then rerank. Only replace a seeded demo when switching domains auth↔scraping.",
+        "Initialize or replace the single active decision workspace. For authentication / Clerk / login / tenant problems use preset \"auth\" (4 seeded options). For scraping / crawl / Firecrawl use preset \"scraping\" (4 seeded options). If you omit preset, the engine infers auth or scraping from title/problem_statement and seeds those options — do not invent options with add_option after that. Only preset \"custom\" starts blank and requires add_option for each candidate (estimate=true until the human confirms). After seeding: set current intake with set_decision_context + rerank; for hypothetical future scale/compliance stress call simulate_future_scenario (do not rewrite live context to the future). IMPORTANT: if auth or scraping is already loaded, do NOT replace it with a blank/custom \"rapid prototyping\" / vibe-coding workspace — that path is REFUSED. For speed follow-ups call set_priority_weight(time_to_prototype, 9 or 10) — it auto-reranks. Only replace a seeded demo when switching domains auth↔scraping.",
       inputSchema: {
         type: "object",
         properties: {
@@ -159,7 +159,7 @@ export function buildDecisionTools() {
           if (!domainSwitch) {
             const refusal = [
               `REFUSED: create_decision will not replace the live ${before.preset} demo (${before.options.length} seeded options).`,
-              "Speed / vibe-coding / prototype-priority follow-ups: call set_priority_weight(time_to_prototype, 9 or 10) then rerank_decision_options — Build should fall last on auth.",
+              "Speed / vibe-coding / prototype-priority follow-ups: call set_priority_weight(time_to_prototype, 9 or 10) — it auto-reranks; Build falls last on auth.",
               'To switch domains only: create_decision with the other preset ("auth" or "scraping"). Blank/custom replacements are blocked while a demo is loaded.',
               `Current workspace unchanged: preset=${before.preset}, options=${before.options.length}.`,
             ].join(" ");
@@ -341,7 +341,7 @@ export function buildDecisionTools() {
       name: "set_priority_weight",
       title: "Set priority weight",
       description:
-        "Set the numeric weight (0–10) of exactly one decision criterion on the EXISTING workspace. Higher weight means that axis counts more. Does not recalculate ranking — call rerank_decision_options after a real change. For vibe-coding / \"prototype speed above all\" / ship-fast follow-ups: set criterion time_to_prototype to 9 or 10, then rerank — Build should fall last on the auth preset. Do NOT create_decision or add_option for those follow-ups. Skip redundant writes that set a criterion to its current weight.",
+        "Set the numeric weight (0–10) of exactly one decision criterion on the EXISTING workspace, then AUTOMATICALLY recalculate ranking (same as calling rerank_decision_options). Higher weight means that axis counts more. For vibe-coding / \"prototype speed above all\" / ship-fast follow-ups: set criterion time_to_prototype to 9 or 10 — Build falls last on the auth preset and cards update immediately. Do NOT create_decision or add_option for those follow-ups. Skip redundant writes that set a criterion to its current weight (no auto-rerank on no-ops).",
       inputSchema: {
         type: "object",
         properties: {
@@ -364,10 +364,36 @@ export function buildDecisionTools() {
       async execute(input) {
         const result = setPriorityWeight(input);
         const label = CRITERION_LABELS[input.criterion] ?? input.criterion;
-        const summary = result.changed
-          ? `Changed ${label} weight from ${result.previous} to ${result.weights[input.criterion]}.`
-          : `Skipped redundant write: ${label} already at weight ${result.weights[input.criterion]}.`;
-        return finish("set_priority_weight", input, summary, result);
+        if (!result.changed) {
+          const summary = `Skipped redundant write: ${label} already at weight ${result.weights[input.criterion]}.`;
+          return finish("set_priority_weight", input, summary, result);
+        }
+
+        // Poka-yoke: real weight writes always refresh ranking. Prompt 2 must not depend on LLM memory.
+        const weightSummary = `Changed ${label} weight from ${result.previous} to ${result.weights[input.criterion]}.`;
+        appendToolLog({
+          tool: "set_priority_weight",
+          input,
+          summary: weightSummary,
+          source: pendingSource,
+        });
+
+        const ranked = rerankDecisionOptions();
+        const rerankSummary = [
+          "Auto-reranked after weight change.",
+          formatRankingLine(ranked),
+          "This is the only authoritative ranking — never state a winner without this tool.",
+        ].join("\n");
+        appendToolLog({
+          tool: "rerank_decision_options",
+          input: { auto: true, after: "set_priority_weight" },
+          summary: rerankSummary,
+          source: pendingSource,
+        });
+
+        return toolResult(
+          [weightSummary, rerankSummary, staleNote(ranked), asText({ ...ranked, auto_reranked: true })].join("\n\n"),
+        );
       },
     },
     {

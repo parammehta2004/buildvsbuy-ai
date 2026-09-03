@@ -1005,6 +1005,24 @@ input {
   min-height: 160px;
 }
 
+/* Liability ledger keeps a visible footprint for Act 3 / Clip 4. */
+.rail-panel.ledger-panel {
+  flex: 0 0 auto;
+  min-height: 220px;
+}
+
+.rail-panel.ledger-panel .ledger-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.rail-panel.ledger-panel .rail-empty {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+}
+
 .rail-panel h2 {
   margin: 0;
   font-size: 13px;

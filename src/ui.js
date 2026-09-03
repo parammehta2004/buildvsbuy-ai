@@ -819,7 +819,7 @@ function renderSimulationBanner(snapshot) {
 function renderLedger(snapshot) {
   if (!snapshot.override.active || snapshot.liabilities.length === 0) {
     return `
-      <section class="rail-panel" aria-labelledby="ledger-heading">
+      <section class="rail-panel ledger-panel" aria-labelledby="ledger-heading">
         <h2 id="ledger-heading">Liability ledger</h2>
         <p class="rail-empty">Empty until human override.</p>
       </section>
@@ -827,7 +827,7 @@ function renderLedger(snapshot) {
   }
 
   return `
-    <section class="rail-panel" aria-labelledby="ledger-heading">
+    <section class="rail-panel ledger-panel" aria-labelledby="ledger-heading">
       <h2 id="ledger-heading">Liability ledger</h2>
       <ul class="ledger-list">
         ${snapshot.liabilities

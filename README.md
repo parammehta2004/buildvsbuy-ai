@@ -1,6 +1,6 @@
-# BuildVsBuy.ai — Auth Decision Canvas Demo
+# BuildVsBuy.ai
 
-> *When AI makes prototypes free, the scarce resource isn't building — it's knowing what's worth owning.*
+When prototypes are cheap, the painful part is deciding what you should own.
 
 **Demo video:** [https://youtu.be/rsHmFBJ4VMk](https://youtu.be/rsHmFBJ4VMk) (1:40)
 
@@ -19,35 +19,35 @@
 
 After you run Act 3 in the browser, capture the override banner (pinned Build vs math leader, score gap) plus the populated **Liability ledger** in the right rail. Save as `docs/screenshots/act3-override.png` and uncomment the line below.
 
-<!-- ![Act 3 — human override with liability ledger](docs/screenshots/act3-override.png) -->
+<!-- ![Act 3 override with liability ledger](docs/screenshots/act3-override.png) -->
 
 ---
 
-An AI-native **build-vs-buy** decision environment centered on the **Authentication & Multi-Tenant Permissions** flagship scenario. Humans and browser-integrated agents collaboratively evaluate whether an idea should be **Built**, **Bought (SaaS)**, **Adopted (Open Source)**, or executed as a **Hybrid**. The agent operates, audits, simulates, and negotiates structured decision state directly inside the web page via **WebMCP** tools — not through fragile DOM scraping or a side chat.
+Page for build vs buy (auth or scraping). You and a browser agent share one model through 9 WebMCP tools. Cards update. The tool log shows every call.
 
-**Structured author estimates, not financial advice.** Axis numbers are plausible demo inputs for comparison, not audited forecasts.
+Axis numbers are my estimates for the demo. Not vendor quotes. Not financial advice.
 
 ## Judge quick-start
 
-Open the [live demo](https://buildvsbuy-ai.vercel.app/) — Auth loads by default. Use the **Try this prompt** panel in the right rail (copy buttons) or paste these into ChatGPT Desktop / Chrome 149+ with WebMCP enabled. Without an agent, use the human quick-actions: **Run Act 2 stress**, **Pin Build (Act 3)**, **Solve for Build**, **Compare top 2**.
+Open the [live demo](https://buildvsbuy-ai.vercel.app/). Auth loads by default. Copy a prompt from the right rail, or paste into ChatGPT Desktop / Chrome 149+ with WebMCP on. No agent? Use **Run Act 2 stress**, **Pin Build (Act 3)**, **Solve for Build**, **Compare top 2**.
 
 | Act | Prompt |
 |-----|--------|
-| **1 — vibe trap** | Set time-to-prototype weight to 9 and rerank. Why did Build drop? |
-| **2 — stress** | Load scraping preset. Simulate HIPAA at 50k+ MRU and explain the projected leader change. |
-| **3 — negotiate** | Set core IP to true and pin Build with override reason. Show score gap and liabilities. |
+| **1 vibe trap** | Set time-to-prototype weight to 9 and rerank. Why did Build drop? |
+| **2 stress** | Load scraping preset. Simulate HIPAA at 50k+ MRU and explain the projected leader change. |
+| **3 negotiate** | Set core IP to true and pin Build with override reason. Show score gap and liabilities. |
 
 **Act 2 alternate wording:** Switch to scraping preset, then stress-test for HIPAA compliance at 50k+ users.
 
-For a clean agent recording canvas, open [`?blank=1`](https://buildvsbuy-ai.vercel.app/?blank=1) — prompts remain copyable in the right rail.
+Empty canvas for recording: [`?blank=1`](https://buildvsbuy-ai.vercel.app/?blank=1). Prompts still copy from the right rail.
 
-## Why WebMCP is a native fit
+## Why WebMCP
 
-Traditional agents browse pages by screenshot scraping and simulated clicks — brittle, lossy, and stateless. BuildVsBuy.ai exposes **clean, typed, deterministic tools** directly to the browser-integrated agent via `document.modelContext.registerTool`. The web page becomes a programmable canvas where the human and agent co-manipulate **one shared decision model**:
+Agents that scrape the DOM guess. Here they call typed tools on `document.modelContext.registerTool`. One store for you and the agent.
 
-- The agent writes structured context (`set_decision_context`), adds options, sets weights, reranks, simulates stress scenarios, and even applies a human override — all through typed tool calls.
-- The human sees the same canvas update live and can steer with sliders / toggles that traverse the **same `execute` path** as the agent (`runDecisionTool`, `source: human`).
-- Every tool execution streams into an on-screen **Tool log** — human clicks and agent calls share one store, visible proof of WebMCP leverage.
+- Agent: `set_decision_context`, weights, rerank, simulate, override.
+- You: sliders and buttons go through the same `runDecisionTool` path (`source: human`).
+- Tool log: every execute shows up. If the rank changed, there should be a matching line.
 
 ## The 4 options
 
@@ -58,7 +58,7 @@ Traditional agents browse pages by screenshot scraping and simulated clicks — 
 | **ADOPT** | Better-Auth | Crawl4AI (self-hosted) |
 | **HYBRID** | Supabase Auth + Postgres RLS | Playwright + Bright Data proxies |
 
-Use the header **Auth | Scraping** switcher (or `create_decision({ preset: "scraping" })` via WebMCP) to load the scraping scenario. Boot defaults to Auth on `/`. Neutral Scraping rank under default weights is **Buy > Hybrid > Build > Adopt** — unlike Auth's Adopt-led order.
+Use the header **Auth | Scraping** switcher (or `create_decision({ preset: "scraping" })`) to load scraping. `/` boots Auth. Neutral Scraping rank with default weights is **Buy > Hybrid > Build > Adopt**. Auth usually leads with Adopt.
 
 ## Seven scoring axes (no double-count)
 
@@ -78,19 +78,19 @@ Cash TCO is recurring cash only (`monthly_cash_cost × 60`); engineering hours a
 
 All registered imperatively via `document.modelContext.registerTool`:
 
-1. `create_decision` — initialize / replace the active workspace
-2. `set_decision_context` — write diagnostic answers (scale, compliance, core IP, timeline) into hard state
-3. `add_option` — add a candidate option (`estimate: true` for agent-invented metrics)
-4. `set_priority_weight` — update one criterion weight (redundant-write guard; marks ranking stale)
-5. `rerank_decision_options` — recalculate ranking (required after weight changes)
-6. `compare_decision_options` — pairwise tradeoff breakdown across all axes
-7. `simulate_future_scenario` — stress-test (HIPAA + `50k+` on Scraping flips projected leader away from Buy)
-8. `solve_winning_conditions` — sensitivity: what must change for a target to win
-9. `apply_human_preference_override` — pin + score gap + Liability Ledger for honest human override
+1. `create_decision`: start or replace the workspace
+2. `set_decision_context`: scale, compliance, core IP, timeline
+3. `add_option`: add a candidate (`estimate: true` if the numbers are made up)
+4. `set_priority_weight`: one criterion. Same value still reranks (Prompt 2).
+5. `rerank_decision_options`: recompute ranks
+6. `compare_decision_options`: pairwise across axes
+7. `simulate_future_scenario`: HIPAA + `50k+` on Scraping usually moves the projected leader off Buy
+8. `solve_winning_conditions`: what would have to change for a target to win
+9. `apply_human_preference_override`: pin, score gap, liability list
 
 Every `execute` appends to the Tool log. Human slider, context-chip, rerank, preset load, reset, **Act 2 / Pin Build / Compare**, Export, and Import use `runDecisionTool` or the shared store with `source: human`.
 
-**Human-only (no agent):** after Auth or Scraping loads, use **Run Act 2 stress** (Scraping only — HIPAA + 50k+), **Pin Build (Act 3)** (sets Core IP, reranks, then pins Build), and **Compare top 2**. Cards show author-estimate disclaimers. **Export / Import** persist the canvas as JSON (no localStorage).
+**No agent:** after Auth or Scraping loads, **Run Act 2 stress** (Scraping, HIPAA + 50k+), **Pin Build (Act 3)** (sets core IP, reranks, pins Build), **Compare top 2**. Export / Import is JSON. Nothing in localStorage.
 
 ## Run
 
@@ -118,13 +118,13 @@ npm run lint
 
 ## Demo arc (honest 3-act)
 
-1. **Act 1 — vibe trap:** neutral Auth weights rank `Adopt > Hybrid > Build > Buy`; biasing Time-to-Prototype weight high drops Build to last — the prototype-speed trap.
-2. **Act 2 — stress:** on **Scraping**, `simulate_future_scenario` with HIPAA compliance and `50k+` scale *projects* a stressed ranking where the leader flips **away from Buy** (banner + tool payload). Baseline cards stay unchanged until you rerank after a weight change.
-3. **Act 3 — negotiate:** human asserts core IP → `apply_human_preference_override` pins Build, shows the score gap vs the math leader, and logs a structured Liability Ledger. *Yes, build it — with eyes open.*
+1. **Act 1:** default Auth order is `Adopt > Hybrid > Build > Buy`. Crank Time-to-Prototype and Build usually lands last.
+2. **Act 2:** Scraping + `simulate_future_scenario` (HIPAA, `50k+`). Banner shows a projection. Baseline cards stay until a real rerank.
+3. **Act 3:** pin Build anyway. Gap vs the math leader plus the liability list. You can disagree with the score.
 
 ## Agent demo video script
 
-Record **after** Slices 1–6 are deployed. **Final cut locked at 1:40.** Public video: https://youtu.be/rsHmFBJ4VMk — paste that URL on Devpost. Full timeline: `docs/VIDEO_SCRIPT.md`.
+Public video: https://youtu.be/rsHmFBJ4VMk (1:40). Shoot notes in `docs/VIDEO_SCRIPT.md`.
 
 | Step | Detail |
 |------|--------|
@@ -164,4 +164,4 @@ Tested paths: ChatGPT Desktop in-app browser and Chrome 149+ with `#enable-webmc
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).

@@ -43,6 +43,7 @@ const AGENT_BRIEFING = [
   "4. After any mutation (create_decision, set_decision_context, add_option, set_priority_weight), ranking goes stale. Call rerank_decision_options once before describing the result. Skip redundant writes (e.g. setting a weight to its current value) — the engine already guards these.",
   "5. The math leader and the human's pinned choice can differ — that is the product's whole point. Report both honestly; never silently swap the winner to match the pin and never hide the score gap.",
   "6. Invented metrics for custom dilemmas must be added with estimate=true and flagged to the human as unconfirmed. Never present an estimate as a fact.",
+  "7. Auth / Clerk / login / tenant questions → create_decision with preset \"auth\" (or omit preset — the engine infers auth from the problem text and seeds 4 options). Scraping / crawl / Firecrawl → preset \"scraping\". After a demo preset loads, do NOT call add_option to invent Build/Buy/Adopt — set_decision_context and rerank instead. Only use preset \"custom\" + add_option for a domain that is neither auth nor scraping.",
   "The on-screen Tool Log is ground truth. A ranking claim with no new matching log entry is the tell that you lied — every winner you name must have a tool call behind it in the log. Mid-session the log is often already full; the tell is that it did not gain a new entry for the claim, not that it is empty.",
 ].join("\n");
 
@@ -112,7 +113,7 @@ export function buildDecisionTools() {
       name: "create_decision",
       title: "Create decision",
       description:
-        "Initialize or replace the single active decision workspace. Use preset \"auth\" for the Authentication demo (4 seeded options) or preset \"scraping\" for the AI Web Scraping demo (4 seeded options). Use preset \"custom\" or omit preset for a blank slate — then call add_option for each candidate. Invented metrics in custom mode must set estimate=true on add_option until the human confirms. Does not compute ranking; call rerank_decision_options after options and weights are set.",
+        "Initialize or replace the single active decision workspace. For authentication / Clerk / login / tenant problems use preset \"auth\" (4 seeded options). For scraping / crawl / Firecrawl use preset \"scraping\" (4 seeded options). If you omit preset, the engine infers auth or scraping from title/problem_statement and seeds those options — do not invent options with add_option after that. Only preset \"custom\" starts blank and requires add_option for each candidate (estimate=true until the human confirms). Does not compute ranking; call set_decision_context then rerank_decision_options.",
       inputSchema: {
         type: "object",
         properties: {
@@ -131,7 +132,8 @@ export function buildDecisionTools() {
           preset: {
             type: "string",
             enum: ["auth", "scraping", "custom"],
-            description: "auth = Authentication flagship template. scraping = AI Web Scraping template (4 seeded options).",
+            description:
+              "auth = Authentication flagship (4 options). scraping = AI Web Scraping (4 options). custom = blank slate. Omit to let the engine infer auth/scraping from title/problem.",
           },
         },
         additionalProperties: false,
@@ -139,8 +141,12 @@ export function buildDecisionTools() {
       annotations: { readOnlyHint: false },
       async execute(input) {
         const result = createDecision(input);
+        const presetNote = result.preset
+          ? `Preset: ${result.preset}${result.options.length === 4 && result.preset !== "custom" ? " (seeded — do not add_option invent)" : ""}.`
+          : "Preset: none (blank).";
         const summary = [
           `Created decision "${result.title || "Untitled"}".`,
+          presetNote,
           `Options: ${result.options.length}. Problem: ${result.problemStatement || "—"}.`,
           `Context: org=${result.orgContext}, skill=${result.skillLevel}.`,
         ].join(" ");
@@ -194,7 +200,7 @@ export function buildDecisionTools() {
       name: "add_option",
       title: "Add option",
       description:
-        "Add a candidate option (Build, Buy, Adopt/open_source, or Hybrid). All numeric metrics are required. Set estimate=true when inventing numbers for custom dilemmas — the UI will badge them until the human confirms. Marks ranking stale; call rerank_decision_options after adding options.",
+        "Add a candidate option (Build, Buy, Adopt/open_source, or Hybrid). Use only on a custom (blank) decision — not after auth/scraping presets already seeded 4 options. All numeric metrics are required. Set estimate=true when inventing numbers for custom dilemmas — the UI will badge them until the human confirms. Marks ranking stale; call rerank_decision_options after adding options.",
       inputSchema: {
         type: "object",
         properties: {

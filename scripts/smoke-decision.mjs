@@ -1,6 +1,8 @@
 import {
   loadAuthPreset,
   loadScrapingDemo,
+  createDecision,
+  inferDemoPreset,
   rerankDecisionOptions,
   setDecisionContext,
   simulateFutureScenario,
@@ -280,5 +282,34 @@ assert(
   "import should restore simulation assumptions",
 );
 assert(rankIds(after).join(">") === rankIds(before).join(">"), "import should preserve ranking order");
+
+console.log("Smoke: omit preset + auth language infers Auth seed (Prompt 1 path)");
+assert(
+  inferDemoPreset(
+    "Authentication Strategy: Build vs Buy",
+    "Solo founder shipping auth in 2 weeks for 10k users. Build vs Buy. Clerk?",
+  ) === "auth",
+  "inferDemoPreset should detect auth from Prompt-1-like text",
+);
+const inferred = createDecision({
+  title: "Authentication Strategy: Build vs Buy",
+  problem_statement: "Solo founder shipping auth in 2 weeks for 10k users. Build vs Buy.",
+  org_context: "solo",
+  skill_level: "mid",
+});
+assert(inferred.preset === "auth", "create_decision without preset should infer auth");
+assert(inferred.options.length === 4, "inferred auth should seed 4 options");
+assert(
+  inferred.options.some((item) => item.id === "hybrid") &&
+    inferred.options.some((item) => item.id === "adopt"),
+  "inferred auth must include Adopt + Hybrid seeds",
+);
+const blankCustom = createDecision({
+  title: "Authentication Strategy: Build vs Buy",
+  problem_statement: "Solo founder shipping auth — Clerk?",
+  preset: "custom",
+});
+assert(blankCustom.preset === "custom", "explicit custom must not infer");
+assert(blankCustom.options.length === 0, "explicit custom stays blank");
 
 console.log("PASS: Slice A decision engine smoke tests");

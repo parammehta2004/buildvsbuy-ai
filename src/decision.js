@@ -841,6 +841,39 @@ export function importDecisionState(payload) {
 }
 
 /**
+ * Infer demo preset from natural-language title/problem when the agent
+ * omits `preset`. Explicit `preset: "custom"` always wins (blank slate).
+ * @param {string} titleText
+ * @param {string} problemText
+ * @returns {"auth" | "scraping" | null}
+ */
+export function inferDemoPreset(titleText, problemText) {
+  const hay = `${titleText} ${problemText}`.toLowerCase();
+  const scraping =
+    /\b(scrap(?:e|ing|er)?|crawl(?:er|ing)?|firecrawl|bright\s*data)\b/.test(hay) ||
+    /\bplaywright\b/.test(hay) && /\b(proxy|scrap|crawl)\b/.test(hay);
+  const auth =
+    /\b(auth(?:entication|0)?|clerk|oauth|jwt|login|sign[-\s]?up|better-auth|tenant isolation|multi-tenant|password(?:less)?)\b/.test(
+      hay,
+    ) || /\bsupabase\b/.test(hay) && /\bauth\b/.test(hay);
+
+  if (scraping && !auth) {
+    return "scraping";
+  }
+  if (auth && !scraping) {
+    return "auth";
+  }
+  if (scraping && auth) {
+    // Prefer the stronger domain cue when both appear.
+    if (/\b(scrap(?:e|ing|er)?|crawl(?:er|ing)?|firecrawl)\b/.test(hay)) {
+      return "scraping";
+    }
+    return "auth";
+  }
+  return null;
+}
+
+/**
  * @param {{
  *   title?: string,
  *   problem_statement?: string,
@@ -856,13 +889,18 @@ export function createDecision(input = {}) {
   problemStatement = String(input.problem_statement ?? "").trim();
   orgContext = /** @type {OrgContext} */ (assertEnum(input.org_context ?? "startup", ["solo", "startup", "enterprise"], "org_context"));
   skillLevel = /** @type {SkillLevel} */ (assertEnum(input.skill_level ?? "vibe", ["vibe", "mid", "senior"], "skill_level"));
-  preset = /** @type {"" | "auth" | "scraping" | "custom"} */ (
+
+  const explicit =
     input.preset === "auth" || input.preset === "scraping" || input.preset === "custom"
       ? input.preset
-      : ""
+      : null;
+  const inferred = explicit ? null : inferDemoPreset(title, problemStatement);
+  const resolved = /** @type {"" | "auth" | "scraping" | "custom"} */ (
+    explicit ?? inferred ?? ""
   );
+  preset = resolved;
 
-  if (input.preset === "auth") {
+  if (resolved === "auth") {
     if (!title) {
       title = "Authentication & Multi-Tenant Permissions";
     }
@@ -870,7 +908,7 @@ export function createDecision(input = {}) {
       problemStatement = "How should we implement authentication and tenant isolation?";
     }
     options = AUTH_PRESET_OPTIONS.map((option) => ({ ...option }));
-  } else if (input.preset === "scraping") {
+  } else if (resolved === "scraping") {
     if (!title) {
       title = "AI Web Scraping";
     }

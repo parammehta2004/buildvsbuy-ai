@@ -1,6 +1,6 @@
 # Submission checklist — OpenAI WebMCP Challenge
 
-**Submission deadline:** 03-09-2026  
+**Submission deadline:** 04-09-2026 13:30 IST (Devpost clock: `Sep 4, 2026 @ 1:30pm GMT+5:30`)  
 **Judging period ends:** 21-09-2026  
 
 Use this list before clicking Submit on Devpost.
@@ -38,9 +38,9 @@ Use this list before clicking Submit on Devpost.
 - [ ] Environment: ChatGPT Desktop in-app browser **or** Chrome 149+ with `#enable-webmcp-testing`
 - [ ] **Under 3 minutes**, all three acts visible
 - [ ] Tool log fills entry-by-entry during recording (no invented ranks)
-- [ ] Uploaded to **YouTube**, public
-- [ ] YouTube link added to README hero (embed or link)
-- [ ] YouTube link pasted on Devpost
+- [x] Uploaded to **YouTube**, public — https://youtu.be/rsHmFBJ4VMk
+- [x] YouTube link added to README hero (embed or link)
+- [ ] YouTube link pasted on Devpost form
 
 ## Screenshot (optional but recommended)
 
@@ -55,7 +55,7 @@ Use this list before clicking Submit on Devpost.
 - [ ] **Long description** — paste sections from [DEVPOST.md](DEVPOST.md)
 - [ ] **Live demo URL**
 - [ ] **GitHub repo URL**
-- [ ] **Video URL**
+- [ ] **Video URL** — https://youtu.be/rsHmFBJ4VMk
 - [ ] **Built with:** WebMCP, JavaScript, Vite (adjust as needed)
 - [ ] Confirm project stays **free and unrestricted** through 21-09-2026
 

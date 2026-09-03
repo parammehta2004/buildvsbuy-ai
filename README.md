@@ -2,7 +2,9 @@
 
 > *When AI makes prototypes free, the scarce resource isn't building — it's knowing what's worth owning.*
 
-**Demo video:** *[Add YouTube embed here after recording — see [Agent demo video script](#agent-demo-video-script)]*
+**Demo video:** [https://youtu.be/rsHmFBJ4VMk](https://youtu.be/rsHmFBJ4VMk) (1:40)
+
+[![BuildVsBuy.ai demo](https://img.youtube.com/vi/rsHmFBJ4VMk/maxresdefault.jpg)](https://youtu.be/rsHmFBJ4VMk)
 
 | | |
 |---|---|
@@ -122,7 +124,7 @@ npm run lint
 
 ## Agent demo video script
 
-Record **after** Slices 1–6 are deployed. Target **under 3 minutes**, public on YouTube, then embed at the top of this README and paste the link on Devpost.
+Record **after** Slices 1–6 are deployed. **Final cut locked at 1:40.** Public video: https://youtu.be/rsHmFBJ4VMk — paste that URL on Devpost. Full timeline: `docs/VIDEO_SCRIPT.md`.
 
 | Step | Detail |
 |------|--------|

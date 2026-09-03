@@ -1583,28 +1583,35 @@ export function applyHumanPreferenceOverride(input) {
     throw new Error("Rank options before applying an override.");
   }
 
+  const reason = input.override_reason.trim();
+  // Act 3 poka-yoke: Prompt 4 says "own it / core IP" — pin Build, never the math leader.
+  // Old gate required is_core_ip first; agents often skipped that and silently pinned Buy.
+  const ownershipIntent =
+    /\b(own|core\s*ip|core to|must own|pin(?:ned)?\s+build|strategic)\b/i.test(reason);
+  const shouldPinBuild = input.pin_recommendation === true || ownershipIntent;
+
   let pinnedOptionId = mathLeader.id;
-  if (input.pin_recommendation) {
-    if (isCoreIp) {
-      const buildOption = options.find((item) => item.type === "build");
-      pinnedOptionId = buildOption?.id ?? mathLeader.id;
-    } else {
-      pinnedOptionId = mathLeader.id;
+  if (shouldPinBuild) {
+    const buildOption = options.find((item) => item.type === "build");
+    if (!buildOption) {
+      throw new Error("Cannot pin Build — no build option in the workspace.");
     }
+    isCoreIp = true;
+    pinnedOptionId = buildOption.id;
   }
 
   const pinnedRanked = currentRanking.find((item) => item.id === pinnedOptionId) ?? mathLeader;
   const scoreGap =
     pinnedOptionId === mathLeader.id
       ? 0
-      : Math.round((mathLeader.score - pinnedRanked.score) * 10) / 10;
+      : Math.round((mathLeader.score - pinnedRanked.score) * 100) / 100;
 
   const pinnedOption = findOption(pinnedOptionId);
   liabilities = buildLiabilitiesForOption(pinnedOption).slice(0, 5);
 
   override = {
     active: true,
-    reason: input.override_reason.trim(),
+    reason,
     pinnedOptionId,
     mathLeaderId: mathLeader.id,
     scoreGap,

@@ -1,11 +1,11 @@
 # BuildVsBuy.ai — Final shoot sheet
 
-**Final cut:** 1:45–2:15 (hard cap 3:00)  
+**Final cut (locked):** **1:40** — ship this export. Do not recut for length.  
 **URL:** https://buildvsbuy-ai.vercel.app/?blank=1  
 **Shell:** ChatGPT Desktop in-app browser *or* Chrome + WebMCP side panel (same prompts either way)  
-**Audio:** Record **silent**. Voiceover + overlays in post.
+**Audio:** Picture already locked. Lay VO + overlays on the 1:40 timeline below. If VO runs long, speed 1.05–1.15× — do not reopen picture.
 
-**Rules:** Paste only. Never type on camera. One clip = one beat. Stop when the money shot hits. Redo a bad clip — don’t salvage it live.
+**Rules (shoot was):** Paste only. Never type on camera. One clip = one beat. Stop when the money shot hits. Redo a bad clip — don’t salvage it live. **Now: upload the 1:40 file.**
 
 ---
 
@@ -19,7 +19,7 @@
 
 ---
 
-## CLIP 1 — Hook (~20–40 sec raw → ~12 sec in cut)
+## CLIP 1 — Hook (~20–40 sec raw → **0:00–0:10** in 1:40 cut)
 
 **Goal:** Working software in first 10–15 sec of the video.
 
@@ -38,12 +38,12 @@ I'm a solo founder trying to ship auth in about two weeks — maybe ten thousand
 
 **On-screen later:** `WebMCP tools → live canvas → tool log`
 
-**VO later (Beat 1):**  
-> BuildVsBuy.ai is a decision canvas in the browser. I asked a normal founder question — build auth or buy Clerk — and the agent didn’t guess from the page. It used WebMCP tools on this tab. You can see each call in the tool log: create the workspace, set our context, rerank.
+**VO later (Beat 1) — ~10 sec:**  
+> BuildVsBuy.ai is a decision canvas. I asked a founder question — build auth or buy Clerk. The agent didn’t guess from the page. It used WebMCP tools on this tab: create, set context, rerank — you can see it in the log.
 
 ---
 
-## CLIP 2 — Speed trap (~20–40 sec raw → ~20–25 sec in cut)
+## CLIP 2 — Speed trap (~20–40 sec raw → **0:10–0:44** in 1:40 cut)
 
 **Goal:** Build drops to last when prototype speed dominates. Money shot.
 
@@ -62,12 +62,12 @@ Real talk — we're vibe-coding. Getting a prototype in front of users matters m
 
 **On-screen later:** `Prototype speed ↑ → Build drops`
 
-**VO later (Beat 2):**  
+**VO later (Beat 2) — ~34 sec window; speak in first ~18 sec, hold picture:**  
 > Then I admitted we’re optimizing for speed. The agent re-weighted what matters and reranked. Build fell to last — the vibe trap, on camera, with a log entry to prove it.
 
 ---
 
-## CLIP 3 — Future stress (~25–45 sec raw → ~25–30 sec in cut)
+## CLIP 3 — Future stress (~25–45 sec raw → **0:44–1:08** in 1:40 cut)
 
 **Goal:** Scraping + HIPAA / 50k+ projection. Banner moves; baseline cards stay.
 
@@ -86,12 +86,12 @@ Okay different problem — we're adding AI web scraping. Same kind of team. If w
 
 **On-screen later:** `Future stress, not guesswork`
 
-**VO later (Beat 3):**  
+**VO later (Beat 3) — ~24 sec window:**  
 > New scenario: web scraping at HIPAA scale. The agent stress-tested the future. The banner shows a projection — assumptions included — without pretending the baseline cards already changed.
 
 ---
 
-## CLIP 4 — Override (~25–45 sec raw → ~20–25 sec in cut)
+## CLIP 4 — Override (~25–45 sec raw → **1:08–1:28** in 1:40 cut)
 
 **Goal:** Honest pin — math ≠ your call. Gap + liabilities.
 
@@ -110,14 +110,14 @@ I hear you on the math, but crawling is core to our product — we need to own i
 
 **On-screen later:** `Math leader ≠ your call`
 
-**VO later (Beat 4):**  
+**VO later (Beat 4) — ~20 sec:**  
 > Last beat: I said crawling is core IP anyway. The agent recorded an override — pinned Build, showed the gap versus the math leader, and listed liabilities. No silent winner swap.
 
 **Also grab:** Still frame → `docs/screenshots/act3-override.png` after this clip.
 
 ---
 
-## CLIP 5 — Outro hold (~5–8 sec raw)
+## CLIP 5 — Outro hold (**1:28–1:40** in 1:40 cut)
 
 **Goal:** Proof wall + URL.
 
@@ -128,22 +128,26 @@ I hear you on the math, but crawling is core to our product — we need to own i
 
 **On-screen later:** `buildvsbuy-ai.vercel.app`
 
-**VO later (outro):**  
+**VO later (outro) — ~12 sec:**  
 > Nine typed tools, one shared store, humans and agents on the same execute path. Live at buildvsbuy-ai.vercel.app.
 
 ---
 
-## Edit assembly (post — not while shooting)
+## Edit assembly — **locked 1:40** (04-09-2026)
+
+Picture is done. Lay VO + overlays on this grid. Do not recut to hit 1:45–2:15.
 
 | Final time | Clip | Overlay | VO |
 |------------|------|---------|-----|
-| 0:00–0:12 | 1 | WebMCP tools → live canvas → tool log | Beat 1 |
-| 0:12–0:55 | 2 (+ trim of 1 if needed) | Prototype speed ↑ → Build drops | Beat 2 |
-| 0:55–1:25 | 3 | Future stress, not guesswork | Beat 3 |
-| 1:25–1:50 | 4 | Math leader ≠ your call | Beat 4 |
-| 1:50–2:05 | 5 | buildvsbuy-ai.vercel.app | Outro |
+| 0:00–0:10 | 1 | WebMCP tools → live canvas → tool log | Beat 1 |
+| 0:10–0:44 | 2 | Prototype speed ↑ → Build drops | Beat 2 |
+| 0:44–1:08 | 3 | Future stress, not guesswork | Beat 3 |
+| 1:08–1:28 | 4 | Math leader ≠ your call | Beat 4 |
+| 1:28–1:40 | 5 | buildvsbuy-ai.vercel.app | Outro |
 
-**Edit rules:** Jump cuts between tool calls. Speed slow redraws ~1.15×. Kill dead air, login, URL typing, spinners, long chat text.
+**If your join points differ by a few seconds:** keep 1:40 total. Shift overlay/VO to the money shot in that clip. Do not add padding to reach 2:00.
+
+**Edit rules:** Jump cuts already in. Kill leftover dead air only if it is obvious. No title slate. Hard cap 3:00 already met.
 
 ---
 
@@ -161,15 +165,17 @@ I hear you on the math, but crawling is core to our product — we need to own i
 
 ## Done checklist
 
-- [ ] Clips 1–5 recorded (silent)
-- [ ] Working UI in first 10–15 sec of cut
+- [x] Clips 1–5 recorded (silent)
+- [x] Working UI in first 10–15 sec of cut
 - [ ] Tool log grows on camera
 - [ ] Visible **rerank** (Build drops)
 - [ ] One **non-rerank** tool (simulate or override)
-- [ ] No typing / no title slate / under 3:00
-- [ ] VO + overlays laid in
-- [ ] YouTube **public**
-- [ ] Link in README + `docs/DEVPOST.md`
+- [x] No typing / no title slate / under 3:00 — **final = 1:40**
+- [x] VO + overlays laid in (now)
+- [x] YouTube **public** — https://youtu.be/rsHmFBJ4VMk
+- [x] Link in README + `docs/DEVPOST.md`
 - [ ] Act 3 still → `docs/screenshots/act3-override.png`
 
-**Deadline:** 03-09-2026
+**Live video:** https://youtu.be/rsHmFBJ4VMk — paste on Devpost Video field.
+
+**Deadline:** Devpost clock **04-09-2026 13:30 IST**.

@@ -479,7 +479,7 @@ Target Video Length: **2 minutes 45 seconds** (Safe within < 3:00 rule).
 - [ ] **What humans & agents do together now:** Collaborative negotiation of engineering roadmaps, testing edge-case assumptions, and aligning technical debt with strategic business values.
 - [ ] **Implementation Summary:** Explains the state store, reactive listener bus, and tool execution schema.
 - [ ] **Public Repo URL:** Active GitHub link with documentation.
-- [ ] **Demo Video:** High-definition, crisp YouTube link strictly under 3 minutes with full voiceover demo.
+- [x] **Demo Video:** https://youtu.be/rsHmFBJ4VMk — 1:40, public YouTube.
 
 ---
 

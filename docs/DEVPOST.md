@@ -76,6 +76,7 @@ This started as a rough idea about a topic I didn’t know well and turned into 
 
 **Try it:** https://buildvsbuy-ai.vercel.app/  
 **Agent recording canvas:** https://buildvsbuy-ai.vercel.app/?blank=1  
+**Demo video:** https://youtu.be/rsHmFBJ4VMk  
 **Repo:** https://github.com/parammehta2004/buildvsbuy-ai
 
 ---
@@ -88,7 +89,7 @@ This started as a rough idea about a topic I didn’t know well and turned into 
 **Agent recording URL:** https://buildvsbuy-ai.vercel.app/?blank=1  
 **Repo:** https://github.com/parammehta2004/buildvsbuy-ai  
 
-**Video:** *(YouTube link after recording)*
+**Video:** https://youtu.be/rsHmFBJ4VMk
 
 ---
 

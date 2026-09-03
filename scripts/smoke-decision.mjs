@@ -168,6 +168,26 @@ assert(
   scrapingIds[3] === "adopt",
   `Scraping neutral last should be adopt, got: ${scrapingIds.join(", ")}`,
 );
+assert(getSnapshot().isCoreIp === false, "Fresh scraping demo should not have is_core_ip");
+
+console.log("Smoke: Clip 4 — pin_recommendation without is_core_ip must still pin Build (not Buy)");
+const clip4Pin = applyHumanPreferenceOverride({
+  override_reason: "Crawling is core to our product — we need to own it.",
+  pin_recommendation: true,
+});
+assert(clip4Pin.override.pinnedOptionId === "build", "Clip 4 pin must be Build, not math leader Buy");
+assert(clip4Pin.override.mathLeaderId === "buy", "Math leader should still be Buy");
+assert(clip4Pin.override.scoreGap > 0, "Score gap must be > 0 when Build ≠ Buy leader");
+assert(getSnapshot().isCoreIp === true, "Pin Build must set is_core_ip");
+assert(clip4Pin.liabilities.length >= 3, "Clip 4 must fill liability ledger");
+
+console.log("Smoke: ownership reason without pin_recommendation still pins Build");
+loadScrapingDemo();
+rerankDecisionOptions();
+const reasonOnlyPin = applyHumanPreferenceOverride({
+  override_reason: "We must own the crawler — core IP.",
+});
+assert(reasonOnlyPin.override.pinnedOptionId === "build", "Ownership language must pin Build");
 
 console.log("Smoke: Act 2 Scraping HIPAA+50k+ leader flip");
 loadScrapingDemo();

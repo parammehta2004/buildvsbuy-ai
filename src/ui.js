@@ -1020,8 +1020,8 @@ function bindEvents(root, snapshot) {
           if (!reason || !reason.trim()) {
             return;
           }
-          // Engine only pins Build when is_core_ip is true. Set it, rerank,
-          // then override so the button matches its label.
+          // pin_recommendation=true always pins Build (engine sets is_core_ip).
+          // Still set core IP first when missing so context strip matches Act 3 narrative.
           const snap = getSnapshot();
           if (!snap.isCoreIp) {
             await runDecisionTool("set_decision_context", { is_core_ip: true }, { source: "human" });

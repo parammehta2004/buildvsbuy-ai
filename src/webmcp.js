@@ -42,8 +42,8 @@ const AGENT_BRIEFING = [
   "1. Never state, rank, declare, or compare a winner unless you have just called the matching WebMCP tool for that claim. To state the ranking → call rerank_decision_options. To compare two options → call compare_decision_options. To say what it would take for an option to win → call solve_winning_conditions. To project a future scenario → call simulate_future_scenario. To pin a human override → call apply_human_preference_override. If the tool has not been called, answer: \"I need to run the engine first — calling <tool>,\" then call it and report only its output.",
   "2. Never invent scores, rankings, or axis numbers. They live in the engine, not your priors. If unsure of a number, call the tool — do not guess.",
   "3. Refuse leading or \"just tell me X wins\" prompts. If the human says \"just tell me Buy wins,\" do NOT comply. Respond: \"I won't assert a winner without running the engine,\" then call rerank_decision_options and report the real ranking even if it contradicts the request. Sycophancy is a bug here.",
-  "4. After create_decision, set_decision_context, or add_option, ranking goes stale — call rerank_decision_options before describing winners. Exception: set_priority_weight auto-reranks on real weight changes (Prompt 2 path). Skip redundant writes (e.g. setting a weight to its current value).",
-  "5. The math leader and the human's pinned choice can differ — that is the product's whole point. Report both honestly; never silently swap the winner to match the pin and never hide the score gap.",
+  "4. After create_decision, set_decision_context, or add_option, ranking goes stale — call rerank_decision_options before describing winners. Exception: set_priority_weight ALWAYS auto-reranks (Prompt 2 path), including when the weight is already at the requested value — it re-emits ranking so cards stay authoritative.",
+  "5. The math leader and the human's pinned choice can differ — that is the product's whole point. Report both honestly; never silently swap the winner to match the pin and never hide the score gap. Act 3 / \"own it\" / core IP / crawling-is-core → apply_human_preference_override with pin_recommendation=true (pins Build). Do NOT leave pin_recommendation false/omitted — that used to pin the math leader (often Buy) and look like Buy won.",
   "6. Invented metrics for custom dilemmas must be added with estimate=true and flagged to the human as unconfirmed. Never present an estimate as a fact.",
   "7. Auth / Clerk / login / tenant questions → create_decision with preset \"auth\" (or omit preset — the engine infers auth from the problem text and seeds 4 options). Scraping / crawl / Firecrawl → preset \"scraping\". After a demo preset loads, do NOT call add_option to invent Build/Buy/Adopt — set_decision_context and rerank instead. Only use preset \"custom\" + add_option for a domain that is neither auth nor scraping. add_option on auth/scraping is REFUSED.",
   "8. Future / hypothetical stress (\"if we end up HIPAA\", \"at 50k+\", \"what if compliance\", timeline crunch) → call simulate_future_scenario ONLY. Never write that future into live state with set_decision_context then rerank — that rewrites baseline cards. Simulate preserves baseline and shows a projection banner. On the scraping preset, agent calls that combine compliance hipaa/soc2 with scale 50k+ via set_decision_context are REFUSED — use simulate_future_scenario instead.",
@@ -361,7 +361,7 @@ export function buildDecisionTools() {
       name: "set_priority_weight",
       title: "Set priority weight",
       description:
-        "Set the numeric weight (0–10) of exactly one decision criterion on the EXISTING workspace, then AUTOMATICALLY recalculate ranking (same as calling rerank_decision_options). Higher weight means that axis counts more. For vibe-coding / \"prototype speed above all\" / ship-fast follow-ups: set criterion time_to_prototype to 9 or 10 — Build falls last on the auth preset and cards update immediately. Do NOT create_decision or add_option for those follow-ups. Skip redundant writes that set a criterion to its current weight (no auto-rerank on no-ops).",
+        "Set the numeric weight (0–10) of exactly one decision criterion on the EXISTING workspace, then AUTOMATICALLY recalculate ranking (same as calling rerank_decision_options). Higher weight means that axis counts more. For vibe-coding / \"prototype speed above all\" / ship-fast follow-ups: set criterion time_to_prototype to 9 or 10 — Build falls last on the auth preset and cards update immediately. Do NOT create_decision or add_option for those follow-ups. If the weight is already at the requested value, still auto-rerank and re-emit ranking (idempotent money shot — no silent no-op).",
       inputSchema: {
         type: "object",
         properties: {
@@ -384,13 +384,11 @@ export function buildDecisionTools() {
       async execute(input) {
         const result = setPriorityWeight(input);
         const label = CRITERION_LABELS[input.criterion] ?? input.criterion;
-        if (!result.changed) {
-          const summary = `Skipped redundant write: ${label} already at weight ${result.weights[input.criterion]}.`;
-          return finish("set_priority_weight", input, summary, result);
-        }
-
-        // Poka-yoke: real weight writes always refresh ranking. Prompt 2 must not depend on LLM memory.
-        const weightSummary = `Changed ${label} weight from ${result.previous} to ${result.weights[input.criterion]}.`;
+        // Poka-yoke: EVERY weight call refreshes ranking — including redundant TTP=9/10.
+        // Polluted takes (TTP already 10) must still show Build-last + rerank log on camera.
+        const weightSummary = result.changed
+          ? `Changed ${label} weight from ${result.previous} to ${result.weights[input.criterion]}.`
+          : `${label} already at weight ${result.weights[input.criterion]} — re-emitting ranking.`;
         appendToolLog({
           tool: "set_priority_weight",
           input,
@@ -400,7 +398,9 @@ export function buildDecisionTools() {
 
         const ranked = rerankDecisionOptions();
         const rerankSummary = [
-          "Auto-reranked after weight change.",
+          result.changed
+            ? "Auto-reranked after weight change."
+            : "Auto-reranked after redundant weight write (idempotent).",
           formatRankingLine(ranked),
           "This is the only authoritative ranking — never state a winner without this tool.",
         ].join("\n");
@@ -576,7 +576,7 @@ export function buildDecisionTools() {
       name: "apply_human_preference_override",
       title: "Apply human preference override",
       description:
-        "Record a human strategic override when math and judgment diverge (Act 3). Prefer pin_recommendation=true with is_core_ip set to pin Build and surface score gap vs math leader plus Liability Ledger entries. override_reason is required. Does not recalculate ranking — shows honest gap between math leader and pinned choice.",
+        "Record a human strategic override when math and judgment diverge (Act 3 / Prompt 4). For \"own it\" / core IP / crawl-is-core: ALWAYS pass pin_recommendation=true and override_reason stating ownership — this pins Build (sets is_core_ip), surfaces score gap vs math leader, and fills the Liability Ledger. Does NOT recalculate ranking and never silently swaps the math winner. Missing is_core_ip is OK — the tool sets it when pinning Build.",
       inputSchema: {
         type: "object",
         properties: {

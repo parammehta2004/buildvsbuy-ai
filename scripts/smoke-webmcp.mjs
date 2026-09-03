@@ -95,6 +95,26 @@ async function runFlow() {
     "Tool log must show auto-rerank after weight change",
   );
 
+  console.log("Smoke: 3b redundant TTP=9 still auto-reranks (Clip 2 polluted take)");
+  const beforeRedundantLog = getSnapshot().toolLog.length;
+  const redundantWeight = await tools.set_priority_weight.execute({
+    criterion: "time_to_prototype",
+    weight: 9,
+  });
+  const redundantText = redundantWeight.content[0].text;
+  assert(redundantText.includes("already at weight"), "Redundant weight must say already at weight");
+  assert(redundantText.includes("re-emitting ranking"), "Redundant weight must re-emit ranking");
+  assert(redundantText.includes("Auto-reranked"), "Redundant weight must still auto-rerank");
+  snap = getSnapshot();
+  assert(snap.rankingCurrent === true, "Redundant auto-rerank must leave ranking current");
+  assert(rankIds(snap).at(-1) === "build", `Redundant TTP=9 must keep Build last, got: ${rankIds(snap).join(", ")}`);
+  assert(
+    snap.toolLog.slice(beforeRedundantLog).some(
+      (entry) => entry.tool === "rerank_decision_options" && /Auto-reranked/.test(entry.summary),
+    ),
+    "Tool log must gain a new auto-rerank after redundant weight write",
+  );
+
   console.log("Smoke: 4 explicit rerank still idempotent");
   await tools.rerank_decision_options.execute({});
   snap = getSnapshot();

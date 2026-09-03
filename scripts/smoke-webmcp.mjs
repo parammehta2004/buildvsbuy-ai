@@ -64,6 +64,15 @@ async function runFlow() {
     `Preset options must keep locked relative order adopt>hybrid>build>buy, got: ${neutralIds.join(", ")}`,
   );
 
+  console.log("Smoke: 2b solve_winning_conditions REFUSED on auth before any weight write");
+  const solveEarlyText = (
+    await tools.solve_winning_conditions.execute({ target_option_id: "buy" })
+  ).content[0].text;
+  assert(solveEarlyText.includes("REFUSED"), "Solve before weight on auth must be refused");
+  assert(solveEarlyText.includes("set_priority_weight"), "Solve refusal must point at set_priority_weight");
+  snap = getSnapshot();
+  assert(snap.rankingCurrent === true, "Solve refusal must not mutate ranking");
+
   console.log("Smoke: 3 set_priority_weight TTP=9 (auto-reranks)");
   const weightResult = await tools.set_priority_weight.execute({
     criterion: "time_to_prototype",

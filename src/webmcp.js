@@ -9,6 +9,7 @@ import {
   compareDecisionOptions,
   createDecision,
   getSnapshot,
+  getToolLog,
   inferDemoPreset,
   rerankDecisionOptions,
   setDecisionContext,
@@ -46,9 +47,28 @@ const AGENT_BRIEFING = [
   "6. Invented metrics for custom dilemmas must be added with estimate=true and flagged to the human as unconfirmed. Never present an estimate as a fact.",
   "7. Auth / Clerk / login / tenant questions → create_decision with preset \"auth\" (or omit preset — the engine infers auth from the problem text and seeds 4 options). Scraping / crawl / Firecrawl → preset \"scraping\". After a demo preset loads, do NOT call add_option to invent Build/Buy/Adopt — set_decision_context and rerank instead. Only use preset \"custom\" + add_option for a domain that is neither auth nor scraping. add_option on auth/scraping is REFUSED.",
   "8. Future / hypothetical stress (\"if we end up HIPAA\", \"at 50k+\", \"what if compliance\", timeline crunch) → call simulate_future_scenario ONLY. Never write that future into live state with set_decision_context then rerank — that rewrites baseline cards. Simulate preserves baseline and shows a projection banner. On the scraping preset, agent calls that combine compliance hipaa/soc2 with scale 50k+ via set_decision_context are REFUSED — use simulate_future_scenario instead.",
-  "9. Speed / vibe-coding / prototype-priority follow-ups on an existing auth (or scraping) workspace → ONLY set_priority_weight(time_to_prototype, 9 or 10). That tool auto-reranks — cards update; Build falls last on auth. Do NOT create_decision a new blank workspace. Do NOT wait for a separate rerank call. Replacing a seeded demo with custom/blank is REFUSED; only auth↔scraping domain switches are allowed.",
+  "9. Speed / vibe-coding / prototype-priority follow-ups on an existing auth (or scraping) workspace → ONLY set_priority_weight(time_to_prototype, 9 or 10). That tool auto-reranks — cards update; Build falls last on auth. Do NOT create_decision a new blank workspace. Do NOT call solve_winning_conditions for that question. Do NOT wait for a separate rerank call. Replacing a seeded demo with custom/blank is REFUSED; only auth↔scraping domain switches are allowed.",
+  "10. On the auth preset, solve_winning_conditions is REFUSED until you have changed a priority weight at least once this session (set_priority_weight). Speed/vibe questions are weight writes, not flip-lever solves.",
   "The on-screen Tool Log is ground truth. A ranking claim with no new matching log entry is the tell that you lied — every winner you name must have a tool call behind it in the log. Mid-session the log is often already full; the tell is that it did not gain a new entry for the claim, not that it is empty.",
 ].join("\n");
+
+/**
+ * True if a real (non-redundant) set_priority_weight ran since the last successful create_decision.
+ * Used to keep Act 1b on the weight path before flip-lever solves.
+ */
+function hasRealWeightWriteSinceLastCreate() {
+  const log = getToolLog();
+  let start = 0;
+  for (let i = log.length - 1; i >= 0; i -= 1) {
+    if (log[i].tool === "create_decision" && !/REFUSED/.test(log[i].summary ?? "")) {
+      start = i + 1;
+      break;
+    }
+  }
+  return log
+    .slice(start)
+    .some((entry) => entry.tool === "set_priority_weight" && /^Changed /.test(entry.summary ?? ""));
+}
 
 /**
  * @param {string} text
@@ -507,7 +527,7 @@ export function buildDecisionTools() {
       name: "solve_winning_conditions",
       title: "Solve winning conditions",
       description:
-        "Sensitivity analysis: what must change for target_option_id to beat the current math leader? For each of the seven criteria, computes the minimum weight (0-10, step 0.1, other weights held constant) that flips the target to rank #1 — returned as flip_levers with current_weight, required_weight, and direction. Also returns human-readable levers, score_gap, and suggested_context_shifts. Call after ranking is computed (rerank_decision_options). Never assert what it would take for an option to win without calling this tool first; if asked, call this and report only its output.",
+        "Sensitivity analysis: what must change for target_option_id to beat the current math leader? NOT for vibe-coding / prototype-speed / \"does that change who you'd recommend\" — those are set_priority_weight(time_to_prototype, 9 or 10) which auto-reranks. On the auth preset, this tool is REFUSED until a real set_priority_weight has run this session. After priorities are set: computes flip_levers (0-10, step 0.1), score_gap, and suggested_context_shifts. Never assert flip-lever claims without calling this tool.",
       inputSchema: {
         type: "object",
         properties: {
@@ -518,6 +538,33 @@ export function buildDecisionTools() {
       },
       annotations: { readOnlyHint: true },
       async execute(input) {
+        const before = getSnapshot();
+        if (
+          pendingSource === "agent" &&
+          before.preset === "auth" &&
+          !hasRealWeightWriteSinceLastCreate()
+        ) {
+          const refusal = [
+            "REFUSED: solve_winning_conditions is blocked on auth until priorities change.",
+            "If the human asked about vibe-coding / prototype speed / whether that changes the recommendation: call set_priority_weight(time_to_prototype, 9 or 10) — it auto-reranks and Build falls last.",
+            "Solve is flip-lever analysis after weights move — not a substitute for the speed trap.",
+          ].join(" ");
+          appendToolLog({
+            tool: "solve_winning_conditions",
+            input,
+            summary: refusal,
+            source: pendingSource,
+          });
+          return toolResult(
+            [
+              AGENT_BRIEFING,
+              refusal,
+              staleNote(before),
+              asText({ refused: true, reason: "auth_requires_weight_before_solve" }),
+            ].join("\n\n"),
+          );
+        }
+
         const result = solveWinningConditions(input);
         const summary = result.already_winning
           ? `Target ${input.target_option_id} already leads under current weights.`

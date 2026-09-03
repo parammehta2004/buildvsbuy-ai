@@ -285,14 +285,11 @@ async function runFlow() {
   const entry = getSnapshot().toolLog[getSnapshot().toolLog.length - 1];
   assert(entry?.source === "human", "runDecisionTool human call must log source: human");
 
-  console.log("Smoke: human Solve path reranks when stale then solves");
+  console.log("Smoke: human Solve path after auto-rerank weight write");
   snap = getSnapshot();
-  assert(snap.rankingCurrent === false, "Human weight write should leave ranking stale");
+  assert(snap.rankingCurrent === true, "Human weight write should auto-rerank (ranking current)");
   const buildId = snap.options.find((item) => item.type === "build")?.id;
   assert(buildId, "Auth preset should have a build option");
-  if (!snap.rankingCurrent) {
-    await runDecisionTool("rerank_decision_options", {}, { source: "human" });
-  }
   await runDecisionTool("solve_winning_conditions", { target_option_id: buildId }, { source: "human" });
   const solveEntry = getSnapshot().toolLog[getSnapshot().toolLog.length - 1];
   assert(solveEntry?.tool === "solve_winning_conditions", "Human Solve should log solve_winning_conditions");

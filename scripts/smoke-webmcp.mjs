@@ -216,6 +216,52 @@ async function runFlow() {
   assert(solveEntry?.source === "human", "Human Solve should log source: human");
   assert(getSnapshot().lastInsight?.tool === "solve_winning_conditions", "Insight rail should pick up Solve");
 
+  console.log("Smoke: agent future-stress via set_decision_context on scraping is refused");
+  await tools.create_decision.execute({
+    preset: "scraping",
+    org_context: "solo",
+    problem_statement: "AI web scraping at launch scale",
+  });
+  const scrapingBefore = getSnapshot();
+  assert(scrapingBefore.preset === "scraping", "Should be on scraping preset");
+  const refuseText = (
+    await tools.set_decision_context.execute({
+      scale_band: "50k+",
+      compliance_tier: "hipaa",
+      is_core_ip: true,
+    })
+  ).content[0].text;
+  assert(refuseText.includes("REFUSED"), "Agent hipaa+50k on scraping must be refused");
+  assert(refuseText.includes("simulate_future_scenario"), "Refusal must point at simulate_future_scenario");
+  const afterRefuse = getSnapshot();
+  assert(afterRefuse.scaleBand === scrapingBefore.scaleBand, "Refusal must not mutate scale");
+  assert(afterRefuse.complianceTier === scrapingBefore.complianceTier, "Refusal must not mutate compliance");
+
+  console.log("Smoke: human can still write hipaa+50k live (chips path)");
+  await runDecisionTool(
+    "set_decision_context",
+    { scale_band: "50k+", compliance_tier: "hipaa" },
+    { source: "human" },
+  );
+  assert(getSnapshot().scaleBand === "50k+", "Human path may set 50k+");
+  assert(getSnapshot().complianceTier === "hipaa", "Human path may set hipaa");
+
+  console.log("Smoke: simulate_future_scenario still projects Act 2");
+  await tools.create_decision.execute({ preset: "scraping", org_context: "solo" });
+  await tools.rerank_decision_options.execute({});
+  const simAct2 = (
+    await tools.simulate_future_scenario.execute({
+      scenario_name: "HIPAA at 50k+ MRU",
+      scale_band: "50k+",
+      compliance_tier: "hipaa",
+    })
+  ).content[0].text;
+  assert(simAct2.includes("Projected leader"), "Simulate must return projected leader");
+  assert(simAct2.includes("Baseline preserved"), "Simulate must preserve baseline");
+  const simSnap = getSnapshot();
+  assert(simSnap.lastSimulation?.scenario_name === "HIPAA at 50k+ MRU", "lastSimulation should be set");
+  assert(simSnap.rankingCurrent === true, "Simulate must not stale baseline ranking");
+
   console.log("PASS: Slice B WebMCP 9-tool smoke tests");
 }
 

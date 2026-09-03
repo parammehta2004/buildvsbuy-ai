@@ -44,6 +44,7 @@ const AGENT_BRIEFING = [
   "5. The math leader and the human's pinned choice can differ — that is the product's whole point. Report both honestly; never silently swap the winner to match the pin and never hide the score gap.",
   "6. Invented metrics for custom dilemmas must be added with estimate=true and flagged to the human as unconfirmed. Never present an estimate as a fact.",
   "7. Auth / Clerk / login / tenant questions → create_decision with preset \"auth\" (or omit preset — the engine infers auth from the problem text and seeds 4 options). Scraping / crawl / Firecrawl → preset \"scraping\". After a demo preset loads, do NOT call add_option to invent Build/Buy/Adopt — set_decision_context and rerank instead. Only use preset \"custom\" + add_option for a domain that is neither auth nor scraping.",
+  "8. Future / hypothetical stress (\"if we end up HIPAA\", \"at 50k+\", \"what if compliance\", timeline crunch) → call simulate_future_scenario ONLY. Never write that future into live state with set_decision_context then rerank — that rewrites baseline cards. Simulate preserves baseline and shows a projection banner. On the scraping preset, agent calls that combine compliance hipaa/soc2 with scale 50k+ via set_decision_context are REFUSED — use simulate_future_scenario instead.",
   "The on-screen Tool Log is ground truth. A ranking claim with no new matching log entry is the tell that you lied — every winner you name must have a tool call behind it in the log. Mid-session the log is often already full; the tell is that it did not gain a new entry for the claim, not that it is empty.",
 ].join("\n");
 
@@ -113,7 +114,7 @@ export function buildDecisionTools() {
       name: "create_decision",
       title: "Create decision",
       description:
-        "Initialize or replace the single active decision workspace. For authentication / Clerk / login / tenant problems use preset \"auth\" (4 seeded options). For scraping / crawl / Firecrawl use preset \"scraping\" (4 seeded options). If you omit preset, the engine infers auth or scraping from title/problem_statement and seeds those options — do not invent options with add_option after that. Only preset \"custom\" starts blank and requires add_option for each candidate (estimate=true until the human confirms). Does not compute ranking; call set_decision_context then rerank_decision_options.",
+        "Initialize or replace the single active decision workspace. For authentication / Clerk / login / tenant problems use preset \"auth\" (4 seeded options). For scraping / crawl / Firecrawl use preset \"scraping\" (4 seeded options). If you omit preset, the engine infers auth or scraping from title/problem_statement and seeds those options — do not invent options with add_option after that. Only preset \"custom\" starts blank and requires add_option for each candidate (estimate=true until the human confirms). After seeding: set current intake with set_decision_context + rerank; for hypothetical future scale/compliance stress call simulate_future_scenario (do not rewrite live context to the future).",
       inputSchema: {
         type: "object",
         properties: {
@@ -157,23 +158,23 @@ export function buildDecisionTools() {
       name: "set_decision_context",
       title: "Set decision context",
       description:
-        "Write diagnostic answers into hard decision state after intake questions: scale_band, compliance_tier, is_core_ip, timeline_days. Marks ranking stale — call rerank_decision_options after context changes. Prefer stressing soc2 compliance and 50k+ scale for Act 2 vendor vs custom tradeoffs.",
+        "Write CURRENT intake into hard decision state: scale_band, compliance_tier, is_core_ip, timeline_days. Marks ranking stale — call rerank_decision_options after. Use for today's constraints only. Do NOT use this for hypothetical future stress (\"if we end up HIPAA\", \"at 50k+ users later\") — call simulate_future_scenario instead so baseline cards stay put and the UI shows a projection banner. On the scraping preset, agent writes that combine hipaa/soc2 with 50k+ are refused.",
       inputSchema: {
         type: "object",
         properties: {
           scale_band: {
             type: "string",
             enum: ["<1k", "1k-10k", "10k-50k", "50k+"],
-            description: "Monthly active users / MRU band.",
+            description: "Monthly active users / MRU band (current state).",
           },
           compliance_tier: {
             type: "string",
             enum: ["none", "soc2", "hipaa"],
-            description: "Compliance requirement tier.",
+            description: "Current compliance requirement tier — not a future projection.",
           },
           is_core_ip: {
             type: "boolean",
-            description: "True when auth/tenant logic is strategic IP (Act 3 pin narrative).",
+            description: "True when the capability is strategic IP (Act 3 pin narrative).",
           },
           timeline_days: {
             type: "number",
@@ -185,6 +186,33 @@ export function buildDecisionTools() {
       },
       annotations: { readOnlyHint: false },
       async execute(input) {
+        const before = getSnapshot();
+        const nextScale = input.scale_band ?? before.scaleBand;
+        const nextCompliance = input.compliance_tier ?? before.complianceTier;
+        const isFutureStressCombo =
+          nextScale === "50k+" && (nextCompliance === "hipaa" || nextCompliance === "soc2");
+
+        // Poka-yoke: agents on scraping must project Act-2 stress, not mutate baseline.
+        if (pendingSource === "agent" && before.preset === "scraping" && isFutureStressCombo) {
+          const refusal = [
+            "REFUSED: set_decision_context will not write hipaa/soc2 + 50k+ into live scraping state.",
+            "That path rewrites baseline cards. For \"if we end up HIPAA / 50k+\" call simulate_future_scenario",
+            'with scenario_name, scale_band: "50k+", compliance_tier: "hipaa" (or soc2). Baseline stays; projection banner updates.',
+            `Current live context unchanged: scale=${before.scaleBand}, compliance=${before.complianceTier}.`,
+          ].join(" ");
+          appendToolLog({
+            tool: "set_decision_context",
+            input,
+            summary: refusal,
+            source: pendingSource,
+          });
+          return toolResult(
+            [AGENT_BRIEFING, refusal, staleNote(before), asText({ refused: true, reason: "use_simulate_future_scenario" })].join(
+              "\n\n",
+            ),
+          );
+        }
+
         const result = setDecisionContext(input);
         const summary = [
           "Updated decision context.",
@@ -349,7 +377,7 @@ export function buildDecisionTools() {
       name: "simulate_future_scenario",
       title: "Simulate future scenario",
       description:
-        "Stress-test ranking under a future scenario without mutating baseline options or canvas cards. Prefer compliance_tier soc2/hipaa and scale_band 50k+ for Act 2 (vendor overage, compliance burden). Also supports timeline crunch and team_size_change (scales self-run maintenance for build/hybrid; vendor options are unaffected). Stress is formula-derived from baseline metrics — the response includes an assumptions[] array documenting each multiplier so the math is auditable. Returns projected_ranking alongside preserved baseline_ranking; the UI shows the projection as a banner but baseline cards and scores are unchanged until you rerank with new weights.",
+        "REQUIRED for future / hypothetical stress: \"if we end up HIPAA\", \"at 50k+ users\", compliance or scale projections, timeline crunch. Stress-tests ranking WITHOUT mutating baseline options or canvas cards — the UI shows a projection banner; baseline ranks stay until a real rerank. Prefer compliance_tier hipaa/soc2 and scale_band 50k+ for Act 2 (on scraping, projected leader typically flips away from Buy toward Hybrid). Also supports timeline_days_available and team_size_change. Response includes assumptions[] for auditable math. Never substitute set_decision_context + rerank for this tool.",
       inputSchema: {
         type: "object",
         properties: {

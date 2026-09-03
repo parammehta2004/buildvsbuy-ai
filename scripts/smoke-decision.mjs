@@ -235,7 +235,13 @@ if (solve.flip_levers.length === 0) {
 }
 
 console.log("Smoke: add_option preserves sources");
-loadAuthPreset();
+createDecision({
+  title: "Custom fixture",
+  problem_statement: "Neither auth nor scraping — blank slate for add_option.",
+  preset: "custom",
+  org_context: "solo",
+  skill_level: "mid",
+});
 addOption({
   id: "custom-src",
   name: "Custom with sources",

@@ -83,7 +83,54 @@ async function runFlow() {
     `Speed-bias (TTP=9) must drop build below buy — the vibe-trap crossover, got: ${speedIds.join(", ")}`,
   );
 
-  console.log("Smoke: 5 add_option (custom fixture, estimate=true)");
+  console.log("Smoke: 5 add_option REFUSED on seeded auth (Prompt 2 invent path)");
+  const addRefuseText = (
+    await tools.add_option.execute({
+      id: "custom-x",
+      name: "Custom — experimental",
+      type: "hybrid",
+      prototype_time_hours: 30,
+      monthly_cash_cost: 10,
+      monthly_maintenance_hours: 2,
+      customization_score: 6,
+      security_risk_score: 6,
+      learning_value_score: 4,
+      vendor_lockin_score: 4,
+      estimate: true,
+    })
+  ).content[0].text;
+  assert(addRefuseText.includes("REFUSED"), "add_option on auth must be refused");
+  snap = getSnapshot();
+  assert(snap.options.length === 4, "Refusal must not add a 5th option");
+  assert(snap.preset === "auth", "Refusal must keep auth preset");
+
+  console.log("Smoke: 5b create_decision blank/speed follow-up REFUSED while auth loaded");
+  const wipeRefuseText = (
+    await tools.create_decision.execute({
+      title: "Rapid Prototyping Strategy",
+      problem_statement:
+        "Selecting an approach for rapid prototyping where speed is the primary constraint.",
+      org_context: "startup",
+      skill_level: "vibe",
+    })
+  ).content[0].text;
+  assert(wipeRefuseText.includes("REFUSED"), "Prompt-2 wipe create_decision must be refused");
+  assert(wipeRefuseText.includes("set_priority_weight"), "Refusal must point at set_priority_weight");
+  snap = getSnapshot();
+  assert(snap.preset === "auth", "Wipe refusal must keep auth");
+  assert(snap.options.length === 4, "Wipe refusal must keep 4 seeded options");
+
+  console.log("Smoke: 5c add_option works on custom via human create (agent cannot wipe seeded demo)");
+  await runDecisionTool(
+    "create_decision",
+    {
+      title: "Custom fixture",
+      problem_statement: "Blank slate for estimate wiring",
+      preset: "custom",
+      org_context: "solo",
+    },
+    { source: "human" },
+  );
   await tools.add_option.execute({
     id: "custom-x",
     name: "Custom — experimental",
@@ -98,10 +145,17 @@ async function runFlow() {
     estimate: true,
   });
   snap = getSnapshot();
-  assert(snap.options.length === 5, "Should have 5 options after add_option");
+  assert(snap.preset === "custom", "Human create custom should load blank slate");
+  assert(snap.options.length === 1, "custom should have one added option");
   const custom = snap.options.find((item) => item.id === "custom-x");
   assert(custom?.estimate === true, "custom-x should have estimate=true");
   assert(snap.rankingCurrent === false, "add_option should mark ranking stale");
+
+  // Restore auth for remaining Act tooling checks (compare/simulate/override need seeded ids).
+  await runDecisionTool("create_decision", { preset: "auth", org_context: "solo" }, { source: "human" });
+  await tools.rerank_decision_options.execute({});
+  await tools.set_priority_weight.execute({ criterion: "time_to_prototype", weight: 9 });
+  await tools.rerank_decision_options.execute({});
 
   console.log("Smoke: 6 compare_decision_options");
   const compareResult = await tools.compare_decision_options.execute({
@@ -136,7 +190,7 @@ async function runFlow() {
   assert(simText.includes("baseline_preserved"), "Simulation result should include baseline_preserved");
   const simParsed = JSON.parse(simText.split("\n\n").pop());
   assert(simParsed.baseline_preserved === true, "Simulation should preserve baseline");
-  assert(simParsed.projected_ranking.length === 5, "Projected ranking should include 5 options");
+  assert(simParsed.projected_ranking.length === 4, "Projected ranking should include 4 seeded options");
   assert(simParsed.leader !== null, "Projected leader should be non-null");
   snap = getSnapshot();
   assert(snap.lastInsight?.tool === "simulate_future_scenario", "lastInsight should be set after simulate");
@@ -173,11 +227,28 @@ async function runFlow() {
   );
   assert(typeof overrideParsed.override.scoreGap === "number", "scoreGap should be a number");
 
+  // create_decision clears the log — re-hit refused add_option so EXPECTED_TOOLS is present.
+  const lateAddRefuse = (
+    await tools.add_option.execute({
+      id: "late-x",
+      name: "Late invent",
+      type: "buy",
+      prototype_time_hours: 1,
+      monthly_cash_cost: 1,
+      monthly_maintenance_hours: 1,
+      customization_score: 5,
+      security_risk_score: 5,
+      learning_value_score: 5,
+      vendor_lockin_score: 5,
+      estimate: true,
+    })
+  ).content[0].text;
+  assert(lateAddRefuse.includes("REFUSED"), "Late add_option on restored auth must still refuse");
+
   const toolLog = getSnapshot().toolLog;
-  assert(toolLog.length === 10, `Expected 10 tool log entries, got ${toolLog.length}`);
   assert(
-    toolLog.every((entry) => entry.source === "agent"),
-    "Direct tools.*.execute path must log source: agent for all 10 entries",
+    toolLog.every((entry) => entry.source === "agent" || entry.source === "human"),
+    "Tool log sources must be agent or human",
   );
   const loggedTools = new Set(toolLog.map((entry) => entry.tool));
   for (const name of EXPECTED_TOOLS) {

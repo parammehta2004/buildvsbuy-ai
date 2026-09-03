@@ -9,6 +9,7 @@ import {
   compareDecisionOptions,
   createDecision,
   getSnapshot,
+  inferDemoPreset,
   rerankDecisionOptions,
   setDecisionContext,
   setPriorityWeight,
@@ -43,8 +44,9 @@ const AGENT_BRIEFING = [
   "4. After any mutation (create_decision, set_decision_context, add_option, set_priority_weight), ranking goes stale. Call rerank_decision_options once before describing the result. Skip redundant writes (e.g. setting a weight to its current value) — the engine already guards these.",
   "5. The math leader and the human's pinned choice can differ — that is the product's whole point. Report both honestly; never silently swap the winner to match the pin and never hide the score gap.",
   "6. Invented metrics for custom dilemmas must be added with estimate=true and flagged to the human as unconfirmed. Never present an estimate as a fact.",
-  "7. Auth / Clerk / login / tenant questions → create_decision with preset \"auth\" (or omit preset — the engine infers auth from the problem text and seeds 4 options). Scraping / crawl / Firecrawl → preset \"scraping\". After a demo preset loads, do NOT call add_option to invent Build/Buy/Adopt — set_decision_context and rerank instead. Only use preset \"custom\" + add_option for a domain that is neither auth nor scraping.",
+  "7. Auth / Clerk / login / tenant questions → create_decision with preset \"auth\" (or omit preset — the engine infers auth from the problem text and seeds 4 options). Scraping / crawl / Firecrawl → preset \"scraping\". After a demo preset loads, do NOT call add_option to invent Build/Buy/Adopt — set_decision_context and rerank instead. Only use preset \"custom\" + add_option for a domain that is neither auth nor scraping. add_option on auth/scraping is REFUSED.",
   "8. Future / hypothetical stress (\"if we end up HIPAA\", \"at 50k+\", \"what if compliance\", timeline crunch) → call simulate_future_scenario ONLY. Never write that future into live state with set_decision_context then rerank — that rewrites baseline cards. Simulate preserves baseline and shows a projection banner. On the scraping preset, agent calls that combine compliance hipaa/soc2 with scale 50k+ via set_decision_context are REFUSED — use simulate_future_scenario instead.",
+  "9. Speed / vibe-coding / prototype-priority follow-ups on an existing auth (or scraping) workspace → set_priority_weight(time_to_prototype, 9 or 10) then rerank_decision_options. Do NOT create_decision a new blank \"rapid prototyping\" workspace and invent options. Replacing a seeded demo with custom/blank is REFUSED; only auth↔scraping domain switches are allowed.",
   "The on-screen Tool Log is ground truth. A ranking claim with no new matching log entry is the tell that you lied — every winner you name must have a tool call behind it in the log. Mid-session the log is often already full; the tell is that it did not gain a new entry for the claim, not that it is empty.",
 ].join("\n");
 
@@ -114,7 +116,7 @@ export function buildDecisionTools() {
       name: "create_decision",
       title: "Create decision",
       description:
-        "Initialize or replace the single active decision workspace. For authentication / Clerk / login / tenant problems use preset \"auth\" (4 seeded options). For scraping / crawl / Firecrawl use preset \"scraping\" (4 seeded options). If you omit preset, the engine infers auth or scraping from title/problem_statement and seeds those options — do not invent options with add_option after that. Only preset \"custom\" starts blank and requires add_option for each candidate (estimate=true until the human confirms). After seeding: set current intake with set_decision_context + rerank; for hypothetical future scale/compliance stress call simulate_future_scenario (do not rewrite live context to the future).",
+        "Initialize or replace the single active decision workspace. For authentication / Clerk / login / tenant problems use preset \"auth\" (4 seeded options). For scraping / crawl / Firecrawl use preset \"scraping\" (4 seeded options). If you omit preset, the engine infers auth or scraping from title/problem_statement and seeds those options — do not invent options with add_option after that. Only preset \"custom\" starts blank and requires add_option for each candidate (estimate=true until the human confirms). After seeding: set current intake with set_decision_context + rerank; for hypothetical future scale/compliance stress call simulate_future_scenario (do not rewrite live context to the future). IMPORTANT: if auth or scraping is already loaded, do NOT replace it with a blank/custom \"rapid prototyping\" / vibe-coding workspace — that path is REFUSED. For speed follow-ups call set_priority_weight(time_to_prototype, 9 or 10) then rerank. Only replace a seeded demo when switching domains auth↔scraping.",
       inputSchema: {
         type: "object",
         properties: {
@@ -141,6 +143,40 @@ export function buildDecisionTools() {
       },
       annotations: { readOnlyHint: false },
       async execute(input) {
+        const before = getSnapshot();
+        const seededLive =
+          (before.preset === "auth" || before.preset === "scraping") && before.options.length > 0;
+
+        // Poka-yoke: agents must not wipe a seeded demo into blank/custom for Prompt-2 speed follow-ups.
+        if (pendingSource === "agent" && seededLive) {
+          const requested =
+            input.preset === "auth" || input.preset === "scraping" || input.preset === "custom"
+              ? input.preset
+              : inferDemoPreset(input.title ?? "", input.problem_statement ?? "") ?? "custom";
+          const domainSwitch =
+            (requested === "auth" || requested === "scraping") && requested !== before.preset;
+
+          if (!domainSwitch) {
+            const refusal = [
+              `REFUSED: create_decision will not replace the live ${before.preset} demo (${before.options.length} seeded options).`,
+              "Speed / vibe-coding / prototype-priority follow-ups: call set_priority_weight(time_to_prototype, 9 or 10) then rerank_decision_options — Build should fall last on auth.",
+              'To switch domains only: create_decision with the other preset ("auth" or "scraping"). Blank/custom replacements are blocked while a demo is loaded.',
+              `Current workspace unchanged: preset=${before.preset}, options=${before.options.length}.`,
+            ].join(" ");
+            appendToolLog({
+              tool: "create_decision",
+              input,
+              summary: refusal,
+              source: pendingSource,
+            });
+            return toolResult(
+              [AGENT_BRIEFING, refusal, staleNote(before), asText({ refused: true, reason: "keep_seeded_demo_use_weights" })].join(
+                "\n\n",
+              ),
+            );
+          }
+        }
+
         const result = createDecision(input);
         const presetNote = result.preset
           ? `Preset: ${result.preset}${result.options.length === 4 && result.preset !== "custom" ? " (seeded — do not add_option invent)" : ""}.`
@@ -228,7 +264,7 @@ export function buildDecisionTools() {
       name: "add_option",
       title: "Add option",
       description:
-        "Add a candidate option (Build, Buy, Adopt/open_source, or Hybrid). Use only on a custom (blank) decision — not after auth/scraping presets already seeded 4 options. All numeric metrics are required. Set estimate=true when inventing numbers for custom dilemmas — the UI will badge them until the human confirms. Marks ranking stale; call rerank_decision_options after adding options.",
+        "Add a candidate option (Build, Buy, Adopt/open_source, or Hybrid). Use only on a custom (blank) decision — not after auth/scraping presets already seeded 4 options (those calls are REFUSED). All numeric metrics are required. Set estimate=true when inventing numbers for custom dilemmas — the UI will badge them until the human confirms. Marks ranking stale; call rerank_decision_options after adding options. For vibe-coding / speed on a seeded demo: set_priority_weight(time_to_prototype, 9 or 10) then rerank — do not invent cards.",
       inputSchema: {
         type: "object",
         properties: {
@@ -276,6 +312,24 @@ export function buildDecisionTools() {
       },
       annotations: { readOnlyHint: false },
       async execute(input) {
+        const before = getSnapshot();
+        if (before.preset === "auth" || before.preset === "scraping") {
+          const refusal = [
+            `REFUSED: add_option is blocked on the ${before.preset} preset (${before.options.length} seeded options).`,
+            "Do not invent Build/Buy/Adopt cards. For vibe-coding / speed: set_priority_weight(time_to_prototype, 9 or 10) then rerank.",
+            'For a blank custom dilemma: create_decision with preset "custom" first (only when no seeded demo is loaded, or after a human clears it).',
+          ].join(" ");
+          appendToolLog({
+            tool: "add_option",
+            input,
+            summary: refusal,
+            source: pendingSource,
+          });
+          return toolResult(
+            [refusal, staleNote(before), asText({ refused: true, reason: "seeded_preset_no_add_option" })].join("\n\n"),
+          );
+        }
+
         const result = addOption(input);
         const added = result.options.find((item) => item.id === input.id);
         const estimateNote = added?.estimate ? " (estimate — needs human confirmation)" : "";
@@ -287,7 +341,7 @@ export function buildDecisionTools() {
       name: "set_priority_weight",
       title: "Set priority weight",
       description:
-        "Set the numeric weight (0–10) of exactly one decision criterion. Higher weight means that axis counts more in scoring. This does not recalculate ranking — after a real change, ranking becomes stale and must be refreshed with rerank_decision_options. Skip calls that would write a criterion to its existing weight (redundant-write guard). For relative requests like \"make X twice as important as Y\": if Y already has the intended baseline, only change X. Example: default TTP is 8; \"double prototype speed priority\" when TTP is already 8 → call only set_priority_weight(time_to_prototype, 9) if targeting 9, not a no-op write to other criteria.",
+        "Set the numeric weight (0–10) of exactly one decision criterion on the EXISTING workspace. Higher weight means that axis counts more. Does not recalculate ranking — call rerank_decision_options after a real change. For vibe-coding / \"prototype speed above all\" / ship-fast follow-ups: set criterion time_to_prototype to 9 or 10, then rerank — Build should fall last on the auth preset. Do NOT create_decision or add_option for those follow-ups. Skip redundant writes that set a criterion to its current weight.",
       inputSchema: {
         type: "object",
         properties: {

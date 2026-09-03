@@ -654,7 +654,7 @@ function renderPromptsPanel(snapshot) {
 function renderToolLog(snapshot) {
   if (snapshot.toolLog.length === 0) {
     return `
-      <section class="rail-panel" aria-labelledby="tool-log-heading">
+      <section class="rail-panel tool-log-panel" aria-labelledby="tool-log-heading">
         <h2 id="tool-log-heading">Tool log</h2>
         <p class="tool-log-subtitle">Human and agent actions share one store.</p>
         <p class="rail-empty">No tool calls yet.</p>
@@ -663,7 +663,7 @@ function renderToolLog(snapshot) {
   }
 
   return `
-    <section class="rail-panel" aria-labelledby="tool-log-heading">
+    <section class="rail-panel tool-log-panel" aria-labelledby="tool-log-heading">
       <h2 id="tool-log-heading">Tool log</h2>
       <p class="tool-log-subtitle">Human and agent actions share one store.</p>
       <ul class="tool-log-list">
@@ -817,7 +817,13 @@ function renderSimulationBanner(snapshot) {
  * @param {ReturnType<typeof getSnapshot>} snapshot
  */
 function renderLedger(snapshot) {
+  const params = new URLSearchParams(window.location.search);
+  const blankBoot = params.get("blank") === "1" || params.get("agent") === "1";
   if (!snapshot.override.active || snapshot.liabilities.length === 0) {
+    // Recording mode: don't park an empty ledger under the tool log.
+    if (blankBoot) {
+      return "";
+    }
     return `
       <section class="rail-panel" aria-labelledby="ledger-heading">
         <h2 id="ledger-heading">Liability ledger</h2>

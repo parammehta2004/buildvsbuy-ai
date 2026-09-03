@@ -380,6 +380,7 @@ input {
   border-left: 1px solid var(--line);
   background: var(--panel);
   overflow-y: auto;
+  min-height: 0;
 }
 
 /* ── Context strip ── */
@@ -994,7 +995,13 @@ input {
   border-radius: var(--radius);
   border: 1px solid var(--line);
   background: var(--panel-raised);
-  flex: 1;
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+/* Tool log owns leftover rail height (esp. ?blank=1 recording). */
+.rail-panel.tool-log-panel {
+  flex: 1 1 auto;
   min-height: 160px;
 }
 
@@ -1028,7 +1035,8 @@ input {
   flex-direction: column;
   gap: 8px;
   overflow-y: auto;
-  max-height: 360px;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .tool-log-entry {

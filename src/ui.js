@@ -817,13 +817,7 @@ function renderSimulationBanner(snapshot) {
  * @param {ReturnType<typeof getSnapshot>} snapshot
  */
 function renderLedger(snapshot) {
-  const params = new URLSearchParams(window.location.search);
-  const blankBoot = params.get("blank") === "1" || params.get("agent") === "1";
   if (!snapshot.override.active || snapshot.liabilities.length === 0) {
-    // Recording mode: don't park an empty ledger under the tool log.
-    if (blankBoot) {
-      return "";
-    }
     return `
       <section class="rail-panel" aria-labelledby="ledger-heading">
         <h2 id="ledger-heading">Liability ledger</h2>

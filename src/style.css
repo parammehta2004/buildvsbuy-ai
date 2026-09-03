@@ -999,16 +999,16 @@ input {
   min-height: 0;
 }
 
-/* Tool log owns leftover rail height (esp. ?blank=1 recording). */
+/* Tool log ~55% / ledger ~45% of leftover rail height. */
 .rail-panel.tool-log-panel {
-  flex: 1 1 auto;
-  min-height: 160px;
+  flex: 55 1 0;
+  min-height: 120px;
 }
 
-/* Liability ledger keeps a visible footprint for Act 3 / Clip 4. */
+/* Liability ledger ~45% — Act 3 / Clip 4 money shot needs real room. */
 .rail-panel.ledger-panel {
-  flex: 0 0 auto;
-  min-height: 220px;
+  flex: 45 1 0;
+  min-height: 120px;
 }
 
 .rail-panel.ledger-panel .ledger-list {

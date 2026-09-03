@@ -618,25 +618,24 @@ function renderPromptRows() {
 
 /**
  * Copy-paste prompts for judges testing the agent path.
+ * Hidden on ?blank=1 / ?agent=1 so the tool log owns the rail during recording.
  * @param {ReturnType<typeof getSnapshot>} snapshot
  */
 function renderPromptsPanel(snapshot) {
-  const hasDecision = snapshot.options.length > 0;
   const params = new URLSearchParams(window.location.search);
   const blankBoot = params.get("blank") === "1" || params.get("agent") === "1";
-
-  let subtitle;
-  if (hasDecision) {
-    subtitle = "Copy into ChatGPT to drive the demo.";
-  } else if (blankBoot) {
-    subtitle = "Blank canvas for agent recording — copy a prompt below into ChatGPT.";
-  } else {
-    subtitle = "Copy a prompt into ChatGPT, or load a demo from the main canvas.";
+  if (blankBoot) {
+    return "";
   }
 
+  const hasDecision = snapshot.options.length > 0;
+  const subtitle = hasDecision
+    ? "Copy into ChatGPT to drive the demo."
+    : "Copy a prompt into ChatGPT, or load a demo from the main canvas.";
+
   const blankHint =
-    !hasDecision && !blankBoot
-      ? `<p class="prompts-empty-hint">Recording agent video? Open <code>?blank=1</code> for an empty canvas.</p>`
+    !hasDecision
+      ? `<p class="prompts-empty-hint">Recording agent video? Open <code>?blank=1</code> for an empty canvas (hides this panel).</p>`
       : "";
 
   return `
@@ -650,21 +649,6 @@ function renderPromptsPanel(snapshot) {
 }
 
 /**
- * Honest audit-trail copy: Chaos 5 happens mid-session with a populated log.
- * The tell is no new matching entry, not an empty log.
- * @param {ReturnType<typeof getSnapshot>} snapshot
- */
-function auditTrailCopy(snapshot) {
-  const base =
-    "Every ranking claim must have a matching rerank_decision_options entry here. A claim with no new matching entry is ungrounded — including when this log is already full.";
-  if (snapshot.toolLog.length === 0) {
-    return `<p class="tool-log-trail">${base}</p>`;
-  }
-  const last = snapshot.toolLog[snapshot.toolLog.length - 1];
-  return `<p class="tool-log-trail">${base} Last call: <code>${escapeHtml(last.tool)}</code> at ${escapeHtml(formatTimestamp(last.timestamp))}.</p>`;
-}
-
-/**
  * @param {ReturnType<typeof getSnapshot>} snapshot
  */
 function renderToolLog(snapshot) {
@@ -674,7 +658,6 @@ function renderToolLog(snapshot) {
         <h2 id="tool-log-heading">Tool log</h2>
         <p class="tool-log-subtitle">Human and agent actions share one store.</p>
         <p class="rail-empty">No tool calls yet.</p>
-        ${auditTrailCopy(snapshot)}
       </section>
     `;
   }
@@ -683,7 +666,6 @@ function renderToolLog(snapshot) {
     <section class="rail-panel" aria-labelledby="tool-log-heading">
       <h2 id="tool-log-heading">Tool log</h2>
       <p class="tool-log-subtitle">Human and agent actions share one store.</p>
-      ${auditTrailCopy(snapshot)}
       <ul class="tool-log-list">
         ${snapshot.toolLog
           .slice()
